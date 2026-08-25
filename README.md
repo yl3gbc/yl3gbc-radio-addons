@@ -1,6 +1,6 @@
 # YL3GBC Radio Addons
 
-Private addon repository for YL3GBC radio and satellite-station extensions.
+Addon repository for YL3GBC radio and satellite-station extensions.
 
 Modules:
 - journal
