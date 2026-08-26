@@ -1,0 +1,12 @@
+services:
+  sdrplay-api:
+    image: sonikspace/soniks-client:latest-addons
+    container_name: soniks-sdrplay-api
+    ipc: host
+    user: root
+    device_cgroup_rules:
+      - 'c 189:* rwm'
+    devices:
+      - /dev/bus/usb
+    command: /opt/sdrplay_api/sdrplay_apiService
+    restart: unless-stopped
