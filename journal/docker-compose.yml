@@ -1,0 +1,14 @@
+services:
+  journal:
+    image: sonikspace/soniks-client:latest-addons
+    container_name: soniks-journal
+    user: root
+    volumes_from:
+      - container:soniks-client:ro
+    volumes:
+      - ./journal.py:/opt/yl3gbc-journal/journal.py:ro
+      - journal-data:/var/lib/yl3gbc-journal
+    command: python3 /opt/yl3gbc-journal/journal.py
+    restart: unless-stopped
+volumes:
+  journal-data:
