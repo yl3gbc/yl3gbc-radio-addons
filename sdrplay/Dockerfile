@@ -1,4 +1,4 @@
-ARG CORE_IMAGE=soniks-client-core:2.2.2-amd64
+ARG CORE_IMAGE=soniks-client-core:2.3.0-amd64
 
 # ==============================================================================
 # BUILDER — SoapySDRPlay3
