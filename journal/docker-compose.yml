@@ -4,12 +4,12 @@ services:
     container_name: soniks-journal
     user: root
     volumes:
-      - client_soniks-client:/var/lib/soniks-client:ro
+      - client-x_soniks-client:/var/lib/soniks-client:ro
       - ./journal.py:/opt/yl3gbc-journal/journal.py:ro
       - journal-data:/var/lib/yl3gbc-journal
     command: python3 /opt/yl3gbc-journal/journal.py
     restart: unless-stopped
 volumes:
-  client_soniks-client:
+  client-x_soniks-client:
     external: true
   journal-data:
