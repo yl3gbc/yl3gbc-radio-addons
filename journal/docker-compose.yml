@@ -7,6 +7,9 @@ services:
       - client-x_soniks-client:/var/lib/soniks-client:ro
       - ./journal.py:/opt/yl3gbc-journal/journal.py:ro
       - journal-data:/var/lib/yl3gbc-journal
+      - type: bind
+        source: ../../../../soniks-client-2/logs
+        target: /monitor-logs
     command: python3 /opt/yl3gbc-journal/journal.py
     healthcheck:
       disable: true
