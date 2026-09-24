@@ -5,6 +5,7 @@ BASE=Path("/var/lib/soniks-client/data")
 STORE=Path("/var/lib/yl3gbc-journal")
 STATE=STORE/"state.json"
 LOG=BASE.parent/"logs"/"client.log"
+MONITOR=Path("/monitor-logs")
 def now(): return datetime.now(timezone.utc).isoformat()
 def load():
     try: return json.loads(STATE.read_text())
@@ -30,7 +31,30 @@ def scanlog(active):
                 xs=packets.setdefault(m.group(1),[])
                 if m.group(2) not in xs: xs.append(m.group(2))
         state["_log_pos"]=f.tell()
+def satname(oid):
+    if LOG.exists():
+        for line in reversed(LOG.read_text(errors="replace").splitlines()):
+            if f"JobData(id={oid}," in line:
+                m=re.search(r"satellite_name=(.*?), frequency=",line)
+                if m: return m.group(1).strip()
+    return f"OBS-{oid}"
+def monitor_line(oid,rec):
+    day=rec["finished"][:10]; MONITOR.mkdir(parents=True,exist_ok=True); p=MONITOR/f"signal-{day}.txt"; mark=f"observation={oid}"
+    if p.exists() and mark in p.read_text(errors="replace"): return
+    with p.open("a",encoding="utf-8") as f: f.write(f'{rec["finished"]} | satellite={satname(oid)} | observation={oid} | dekodetas_paketes={rec.get("decoded_packets",0)}\n')
+def backfill():
+    if not LOG.exists(): return
+    day=datetime.now(timezone.utc).strftime("%Y-%m-%d"); lines=LOG.read_text(errors="replace").splitlines(); packets={}; finished=[]
+    for line in lines:
+        if not line.startswith(day): continue
+        m=re.search(r"/output/(\d+)/(data_[^\s]+)",line)
+        if m: packets.setdefault(m.group(1),set()).add(m.group(2))
+        m=re.search(r"Завершено наблюдение: (\d+)",line)
+        if m: finished.append((m.group(1),line[:23]))
+    for oid,stamp in finished:
+        dt=datetime.strptime(stamp,"%Y-%m-%d %H:%M:%S,%f").replace(tzinfo=timezone.utc).isoformat(); monitor_line(oid,{"finished":dt,"decoded_packets":len(packets.get(oid,set()))})
 state=load()
+backfill()
 while True:
     out=BASE/"output"; current={x.name:x for x in out.iterdir() if x.is_dir()} if out.is_dir() else {}
     active=set(current)|{x for x in state if not x.startswith("_")}; scanlog(active)
@@ -44,5 +68,6 @@ while True:
             state[oid]["finished"]=now(); state[oid]["status"]="incomplete" if (BASE/"incomplete"/oid).is_dir() else "complete" if (BASE/"complete"/oid).is_dir() else "sent"
             q=STORE/f'{state[oid]["finished"][:10]}.jsonl'; STORE.mkdir(parents=True,exist_ok=True)
             with q.open("a",encoding="utf-8") as f: f.write(json.dumps({"observation_id":oid,**state[oid]},ensure_ascii=False)+"\n")
+            monitor_line(oid,state[oid])
             state.get("_packets",{}).pop(oid,None); del state[oid]
     save(state); time.sleep(2)
