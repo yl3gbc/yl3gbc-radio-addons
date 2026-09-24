@@ -8,6 +8,8 @@ services:
       - ./journal.py:/opt/yl3gbc-journal/journal.py:ro
       - journal-data:/var/lib/yl3gbc-journal
     command: python3 /opt/yl3gbc-journal/journal.py
+    healthcheck:
+      disable: true
     restart: unless-stopped
 volumes:
   client-x_soniks-client:
