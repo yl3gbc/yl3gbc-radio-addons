@@ -26,6 +26,9 @@ const I18N = {
     sat_best: "Лучший приём", sat_days: "По дням", sat_latest: "Последние наблюдения",
     sat_obs_total: "Наблюдения всего", sat_best_snr: "Лучший SNR, дБ", sat_last: "Последнее наблюдение",
     sat_first: "первое", sat_date: "Дата", sat_none: "Наблюдений этого спутника пока нет",
+    m_map: "Карта", m_polar: "Пролёт над станцией", m_passes: "Ближайшие пролёты (24 ч)",
+    m_max_el: "Макс. угол", m_az: "Азимут AOS → LOS", m_in: "Через", m_running: "идёт",
+    m_alt: "Высота", m_none: "Ближайших пролётов нет", m_max_at: "максимум в",
   },
   en: {
     brand_sub: "SONIKS / Ground station",
@@ -52,6 +55,9 @@ const I18N = {
     sat_best: "Best reception", sat_days: "Per day", sat_latest: "Latest observations",
     sat_obs_total: "Observations total", sat_best_snr: "Best SNR, dB", sat_last: "Last observation",
     sat_first: "first", sat_date: "Date", sat_none: "No observations of this satellite yet",
+    m_map: "Map", m_polar: "Pass over the station", m_passes: "Upcoming passes (24 h)",
+    m_max_el: "Max elevation", m_az: "Azimuth AOS → LOS", m_in: "Starts in", m_running: "running",
+    m_alt: "Altitude", m_none: "No upcoming passes", m_max_at: "maximum at",
   },
 };
 
@@ -370,6 +376,186 @@ function satelliteVisible() {
   return !document.getElementById("tab-satellite").classList.contains("hidden");
 }
 
+/* ---------- orbit / map ---------- */
+
+let orbitData = null;
+let orbitPick = null;
+let land = null;
+
+const mx = (lon) => lon + 180;
+const my = (lat) => 90 - lat;
+
+function segments(points) {
+  // split [lat, lon] lines where they cross the antimeridian
+  const out = [];
+  let cur = [];
+  for (const [lat, lon] of points) {
+    if (cur.length && Math.abs(lon - cur[cur.length - 1][1]) > 180) { out.push(cur); cur = []; }
+    cur.push([lat, lon]);
+  }
+  if (cur.length) out.push(cur);
+  return out.map((seg) => seg.map(([lat, lon]) => `${mx(lon).toFixed(2)},${my(lat).toFixed(2)}`).join(" "));
+}
+
+function footprint(lat, lon, radiusDeg) {
+  const la = (lat * Math.PI) / 180, lo = (lon * Math.PI) / 180, d = (radiusDeg * Math.PI) / 180;
+  const pts = [];
+  for (let b = 0; b <= 360; b += 5) {
+    const br = (b * Math.PI) / 180;
+    const la2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(br));
+    const lo2 = lo + Math.atan2(Math.sin(br) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(la2));
+    let lon2 = ((lo2 * 180) / Math.PI + 540) % 360 - 180;
+    pts.push([(la2 * 180) / Math.PI, lon2]);
+  }
+  return pts;
+}
+
+function countdown(iso) {
+  const sec = Math.round((Date.parse(iso) - Date.now()) / 1000);
+  if (sec <= 0) return null;
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+function selectedPass() {
+  if (!orbitData || !orbitData.passes.length) return null;
+  return orbitData.passes.find((p) => p.id === orbitPick) || orbitData.passes[0];
+}
+
+function renderMap() {
+  const d = orbitData;
+  const svg = document.getElementById("m-map");
+  if (!d) return;
+  const pick = selectedPass();
+  let html = "";
+  for (let lon = -150; lon <= 150; lon += 30) html += `<line class="grid" x1="${mx(lon)}" y1="0" x2="${mx(lon)}" y2="180"/>`;
+  for (let lat = -60; lat <= 60; lat += 30) html += `<line class="grid" x1="0" y1="${my(lat)}" x2="360" y2="${my(lat)}"/>`;
+  if (land) {
+    // rings crossing the antimeridian are stored unwrapped (lon beyond ±180): draw them shifted too
+    const poly = (ring, shift) =>
+      `<polygon class="land" points="${ring.map(([lon, lat]) => `${(mx(lon + shift)).toFixed(2)},${my(lat)}`).join(" ")}"/>`;
+    for (const ring of land) {
+      html += poly(ring, 0);
+      if (ring.some(([lon]) => lon > 180)) html += poly(ring, -360);
+      if (ring.some(([lon]) => lon < -180)) html += poly(ring, 360);
+    }
+  }
+  const sel = d.satellites.find((x) => pick && x.norad === pick.norad);
+  if (sel) {
+    segments(footprint(sel.lat, sel.lon, sel.footprint_deg)).forEach((pts) => { html += `<polyline class="foot" points="${pts}"/>`; });
+    segments(sel.orbit).forEach((pts) => { html += `<polyline class="orbit" points="${pts}"/>`; });
+  }
+  if (pick) segments(pick.ground).forEach((pts) => { html += `<polyline class="track" points="${pts}"/>`; });
+  for (const x of d.satellites) {
+    const isSel = sel && x.norad === sel.norad;
+    html += `<circle class="sat${isSel ? " sel" : ""}" cx="${mx(x.lon)}" cy="${my(x.lat)}" r="${isSel ? 1.8 : 1.1}"/>` +
+      `<text class="sat-label${isSel ? " sel" : ""}" x="${mx(x.lon) + 2}" y="${my(x.lat) + 1}">${esc(x.satellite)}</text>`;
+  }
+  if (d.station.lat !== null && d.station.lat !== undefined) {
+    html += `<rect class="station" x="${mx(d.station.lon) - 1.6}" y="${my(d.station.lat) - 1.6}" width="3.2" height="3.2"/>`;
+  }
+  svg.innerHTML = html;
+  document.getElementById("m-now").textContent = d.now ? `${d.now.slice(0, 10)} ${hms(d.now)} UTC` : "";
+}
+
+function renderPolar() {
+  const pick = selectedPass();
+  const svg = document.getElementById("m-polar");
+  const r = (el) => ((90 - Math.max(el, 0)) / 90) * 100;
+  const xy = (az, el) => {
+    const a = (az * Math.PI) / 180;
+    return [r(el) * Math.sin(a), -r(el) * Math.cos(a)];
+  };
+  let html = [0, 30, 60].map((el) => `<circle class="ring" r="${r(el)}"/>`).join("") +
+    `<line class="axis" x1="-100" y1="0" x2="100" y2="0"/><line class="axis" x1="0" y1="-100" x2="0" y2="100"/>` +
+    `<text class="lbl" x="0" y="-106">N</text><text class="lbl" x="106" y="0">E</text>` +
+    `<text class="lbl" x="0" y="106">S</text><text class="lbl" x="-106" y="0">W</text>` +
+    `<text class="lbl" x="5" y="${-r(30) + 6}">30°</text><text class="lbl" x="5" y="${-r(60) + 6}">60°</text>`;
+  const info = document.getElementById("m-pass");
+  if (pick) {
+    const pts = pick.polar.map(([az, el]) => xy(az, el).map((v) => v.toFixed(1)).join(",")).join(" ");
+    const [ax, ay] = xy(...pick.polar[0]);
+    const [lx, ly] = xy(...pick.polar[pick.polar.length - 1]);
+    html += `<polyline class="path" points="${pts}"/>` +
+      `<circle class="aos" cx="${ax}" cy="${ay}" r="4"/><circle class="los" cx="${lx}" cy="${ly}" r="4"/>`;
+    // where the satellite is now, if the pass is running
+    const now = Date.now(), t0 = Date.parse(pick.start);
+    const i = Math.round((now - t0) / 10000);
+    if (i >= 0 && i < pick.polar.length) {
+      const [nx, ny] = xy(...pick.polar[i]);
+      html += `<circle class="now" cx="${nx}" cy="${ny}" r="5"/>`;
+    }
+    const freq = pick.frequency_hz ? (pick.frequency_hz / 1e6).toFixed(3) : "—";
+    const sat = orbitData.satellites.find((x) => x.norad === pick.norad);
+    info.innerHTML = `<div class="pass-info">` +
+      `<b>${esc(pick.satellite)}</b> <span class="sub">${esc(pick.norad)}</span><br>` +
+      `${hms(pick.start)}–${hms(pick.end)} UTC · ${esc(pick.mode)} · ${freq} ${lang === "ru" ? "МГц" : "MHz"}<br>` +
+      `${t("m_max_el")}: <b>${pick.max_el}°</b> (${t("m_max_at")} ${hms(pick.max_at)}, az ${pick.max_az}°)<br>` +
+      `${t("m_az")}: <b>${pick.aos_az}° → ${pick.los_az}°</b>` +
+      (sat ? `<br>${t("m_alt")}: <b>${num(Math.round(sat.alt_km))} km</b>` : "") +
+      `</div>`;
+  } else {
+    info.innerHTML = `<div class="pass-info">${t("m_none")}</div>`;
+  }
+  svg.innerHTML = html;
+}
+
+function renderPasses() {
+  const d = orbitData;
+  const table = document.getElementById("m-passes");
+  if (!d) return;
+  if (!d.passes.length) { table.innerHTML = `<tr><td class="empty">${t("m_none")}</td></tr>`; return; }
+  const pick = selectedPass();
+  table.innerHTML =
+    `<tr><th>${t("j_time")}</th><th>${t("j_sat")}</th><th>${t("j_mode")}</th><th class="num">${t("j_freq")}</th>` +
+    `<th class="num">${t("m_max_el")}</th><th>${t("m_az")}</th><th class="num">${t("m_in")}</th></tr>` +
+    d.passes.map((p) => {
+      const freq = p.frequency_hz ? (p.frequency_hz / 1e6).toFixed(3) : "—";
+      return `<tr class="pick${pick && p.id === pick.id ? " sel" : ""}" data-pass="${p.id}">` +
+        `<td>${hms(p.start)}–${hms(p.end)}</td><td>${satCell(p.satellite, p.norad)}</td><td>${esc(p.mode)}</td>` +
+        `<td class="num">${freq}</td><td class="num">${p.max_el}°</td><td>${p.aos_az}° → ${p.los_az}°</td>` +
+        `<td class="num" data-start="${p.start}" data-end="${p.end}"></td></tr>`;
+    }).join("");
+  updateCountdowns();
+}
+
+function updateCountdowns() {
+  document.querySelectorAll("#m-passes [data-start]").forEach((td) => {
+    const left = countdown(td.dataset.start);
+    const running = !left && Date.parse(td.dataset.end) > Date.now();
+    td.innerHTML = left ? left : running ? `<span class="run">${t("m_running")}</span>` : "—";
+  });
+}
+
+function renderOrbit() {
+  renderMap();
+  renderPolar();
+  renderPasses();
+}
+
+async function loadOrbit() {
+  try {
+    if (!land) land = await (await fetch("/static/land.json")).json();
+    orbitData = await (await fetch("/api/orbit", { cache: "no-store" })).json();
+    if (orbitPick === null && orbitData.passes.length) {
+      const running = orbitData.passes.find((p) => p.running);
+      orbitPick = (running || orbitData.passes[0]).id;
+    }
+    renderOrbit();
+  } catch (_) {}
+}
+
+document.getElementById("m-passes").addEventListener("click", (e) => {
+  const row = e.target.closest("[data-pass]");
+  if (!row) return;
+  orbitPick = Number(row.dataset.pass);
+  renderOrbit();
+});
+
+function mapVisible() {
+  return !document.getElementById("tab-map").classList.contains("hidden");
+}
+
 function renderSignal() {
   const d = signalData;
   if (!d) return;
@@ -438,6 +624,7 @@ function applyLang() {
   renderJournal();
   renderSignal();
   renderSatellite();
+  if (orbitData) renderOrbit();
 }
 
 function pad(n) { return String(n).padStart(2, "0"); }
@@ -514,7 +701,9 @@ document.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("cli
   document.getElementById("tab-journal").classList.toggle("hidden", tab !== "journal");
   document.getElementById("tab-signal").classList.toggle("hidden", tab !== "signal");
   document.getElementById("tab-satellite").classList.toggle("hidden", tab !== "satellite");
-  document.getElementById("tab-placeholder").classList.toggle("hidden", ["station", "journal", "signal", "satellite"].includes(tab));
+  document.getElementById("tab-map").classList.toggle("hidden", tab !== "map");
+  document.getElementById("tab-placeholder").classList.toggle("hidden", ["station", "journal", "signal", "satellite", "map"].includes(tab));
+  if (tab === "map") loadOrbit();
   if (tab === "satellite") loadSatellites().then(() => loadSatellite());
   if (tab === "journal") loadJournalDays().then(() => loadJournal());
   if (tab === "signal") fillDays("s-day", signalDay).then(() => loadSignal());
@@ -526,6 +715,8 @@ setInterval(tick, 1000);
 loadOverview().then(loadOnline);
 setInterval(loadOverview, 30000);
 setInterval(loadOnline, 300000);
+setInterval(() => { if (mapVisible()) loadOrbit(); }, 30000);
+setInterval(() => { if (mapVisible()) { updateCountdowns(); renderPolar(); } }, 1000);
 setInterval(() => {
   if (journalVisible() && journalDay === utcToday()) loadJournalDays().then(() => loadJournal());
   if (signalVisible() && signalDay === utcToday()) fillDays("s-day", signalDay).then(() => loadSignal());
