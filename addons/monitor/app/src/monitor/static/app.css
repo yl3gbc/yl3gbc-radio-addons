@@ -125,7 +125,10 @@ button, input, select { font: inherit; color: inherit; }
 .tbl .none { color: var(--muted); }
 .tbl a { color: var(--accent); text-decoration: none; }
 .tbl a:hover { text-decoration: underline; }
-.tbl .wf { height: 30px; width: auto; border-radius: 4px; border: 1px solid var(--line); display: block; }
+.tbl .wf {
+  width: 90px; height: 30px; object-fit: cover; object-position: center;
+  border-radius: 4px; border: 1px solid var(--line); display: block;
+}
 .tbl .thumb { height: 30px; width: auto; border-radius: 4px; border: 1px solid var(--line); margin-right: 3px; }
 .tbl .link-btn { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font-weight: 800; }
 .tbl tr.files td { white-space: normal; background: var(--card-in); font-size: 9.5px; line-height: 1.8; }
