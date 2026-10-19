@@ -160,3 +160,19 @@ def online_stations() -> list[dict] | None:
         )
 
     return _cached(("online",), fetch)
+
+
+def satellite_names() -> dict[int, str]:
+    """NORAD -> satellite name from ``/api/satellites/``, cached for an hour."""
+
+    def fetch():
+        names = {}
+        for sat in _pages("satellites/", {}):
+            if not isinstance(sat, dict):
+                continue
+            norad = sat.get("norad_cat_id", sat.get("norad"))
+            if norad is not None and sat.get("name"):
+                names[int(norad)] = sat["name"]
+        return names
+
+    return _cached(("satellites",), fetch, max_age=3600) or {}
