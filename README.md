@@ -34,6 +34,10 @@ cp -r yl3gbc-monitor/addons/monitor ~/soniks-client-new/addons/
 
 ![Станция и сравнение](docs/monitor-station.png)
 
+![Дневной журнал — итоги дня и средние по спутникам](docs/monitor-journal.png)
+
+![Дневной журнал — наблюдения за день](docs/monitor-journal-obs.png)
+
 Вкладки «Спутник», «Орбита / Карта» и «Сигнал / Waterfall» в разработке.
 
 ## Как работает
