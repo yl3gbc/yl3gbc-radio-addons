@@ -1,7 +1,7 @@
 """Daily journal: every observation of one UTC day with noise, signal, packets, images.
 
-Averages for the whole day and per satellite. Satellite names come from satyaml
-(``name:`` / ``norad:`` of each file), the same descriptions the client decodes with.
+Averages for the whole day and per satellite. Satellite names come from the portal
+(``/api/satellites/``); satyaml (``name:`` / ``norad:``) fills in what the portal does not have.
 """
 
 import re
@@ -9,7 +9,7 @@ import threading
 import time
 from datetime import date, datetime, timedelta
 
-from monitor import db
+from monitor import db, portal
 from monitor.config import settings
 
 _NAME = re.compile(r"^name:\s*['\"]?(.+?)['\"]?\s*$", re.M)
@@ -21,6 +21,12 @@ _lock = threading.Lock()
 
 
 def satellite_names() -> dict[int, str]:
+    """NORAD -> name: portal first, satyaml for the rest."""
+
+    return {**_satyaml_names(), **portal.satellite_names()}
+
+
+def _satyaml_names() -> dict[int, str]:
     """NORAD -> name from satyaml, re-read every 10 minutes."""
 
     global _names, _names_loaded
