@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SONIKS MONITOR</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <div class="brand">
+        <span class="logo"></span>
+        <div>
+          <div class="brand-sub" data-i18n="brand_sub"></div>
+          <div class="brand-name">SONIKS Monitor</div>
+        </div>
+      </div>
+
+      <nav class="pills">
+        <button class="pill active" data-page="overview" data-i18n="nav_overview"></button>
+        <button class="pill" data-page="orbit" data-i18n="nav_orbit"></button>
+        <button class="pill" data-page="history" data-i18n="nav_history"></button>
+        <button class="pill" data-page="guide" data-i18n="nav_guide"></button>
+        <button class="pill" data-page="faq">FAQ</button>
+      </nav>
+
+      <div class="langs">
+        <button class="pill lang" data-lang="ru">🇷🇺 RU</button>
+        <button class="pill lang" data-lang="en">🇬🇧 EN</button>
+      </div>
+
+      <div class="clock">
+        <div class="clock-label" data-i18n="utc_date"></div>
+        <div class="clock-value" id="utc-date"></div>
+        <div class="clock-label" data-i18n="utc_time"></div>
+        <div class="clock-value" id="utc-time"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap content">
+    <section id="page-overview" class="page">
+      <nav class="tabs">
+        <button class="pill active" data-tab="station" data-i18n="tab_station"></button>
+        <button class="pill" data-tab="satellite" data-i18n="tab_satellite"></button>
+        <button class="pill" data-tab="journal" data-i18n="tab_journal"></button>
+        <button class="pill" data-tab="map" data-i18n="tab_map"></button>
+        <button class="pill" data-tab="signal" data-i18n="tab_signal"></button>
+      </nav>
+
+      <div id="tab-station" class="tab">
+        <div class="grid3" id="own-station"></div>
+
+        <form class="compare" id="compare-form">
+          <select id="compare-online"><option value="" data-i18n="online_pick"></option></select>
+          <input id="compare-id" inputmode="numeric" autocomplete="off">
+          <button class="pill" type="submit" data-i18n="compare"></button>
+        </form>
+
+        <div class="panel hidden" id="compare-panel">
+          <div class="panel-title" id="compare-title"></div>
+          <div class="grid3" id="compare-station"></div>
+        </div>
+
+        <div class="grid4" id="system"></div>
+      </div>
+
+      <div id="tab-journal" class="tab hidden">
+        <div class="journal-bar">
+          <button class="pill" id="j-prev" type="button">◀</button>
+          <select id="j-day"></select>
+          <button class="pill" id="j-next" type="button">▶</button>
+          <button class="pill" id="j-today" type="button" data-i18n="j_today"></button>
+        </div>
+
+        <div class="grid4" id="j-summary"></div>
+
+        <div class="panel">
+          <div class="panel-title" data-i18n="j_per_sat"></div>
+          <div class="table-wrap"><table class="tbl" id="j-sats"></table></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title" data-i18n="j_observations"></div>
+          <div class="table-wrap"><table class="tbl" id="j-obs"></table></div>
+        </div>
+      </div>
+
+      <div id="tab-placeholder" class="tab hidden">
+        <div class="card wide"><div class="card-label" data-i18n="soon"></div></div>
+      </div>
+    </section>
+
+    <section id="page-placeholder" class="page hidden">
+      <div class="card wide"><div class="card-label" data-i18n="soon"></div></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
