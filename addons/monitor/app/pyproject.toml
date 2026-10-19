@@ -8,6 +8,7 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "paho-mqtt>=2.1",
+    "sgp4",
 ]
 
 [project.scripts]
