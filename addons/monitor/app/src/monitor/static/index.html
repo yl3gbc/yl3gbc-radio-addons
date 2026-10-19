@@ -108,6 +108,24 @@
         </div>
       </div>
 
+      <div id="tab-map" class="tab hidden">
+        <div class="map-top">
+          <div class="panel map-panel">
+            <div class="panel-title"><span data-i18n="m_map"></span> <span class="map-now" id="m-now"></span></div>
+            <svg id="m-map" class="map" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+          <div class="panel polar-panel">
+            <div class="panel-title" data-i18n="m_polar"></div>
+            <svg id="m-polar" class="polar" viewBox="-110 -110 220 220"></svg>
+            <div id="m-pass"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title" data-i18n="m_passes"></div>
+          <div class="table-wrap"><table class="tbl" id="m-passes"></table></div>
+        </div>
+      </div>
+
       <div id="tab-signal" class="tab hidden">
         <div class="journal-bar">
           <button class="pill" id="s-prev" type="button">◀</button>
