@@ -23,6 +23,9 @@ const I18N = {
     j_waterfall: "Водопад", j_count: "Набл.", j_empty: "За этот день наблюдений нет",
     s_all_sats: "Все спутники", s_decoded_only: "Только декодированные",
     s_shown: "Водопадов", s_empty: "Нет водопадов по этому выбору",
+    sat_best: "Лучший приём", sat_days: "По дням", sat_latest: "Последние наблюдения",
+    sat_obs_total: "Наблюдения всего", sat_best_snr: "Лучший SNR, дБ", sat_last: "Последнее наблюдение",
+    sat_first: "первое", sat_date: "Дата", sat_none: "Наблюдений этого спутника пока нет",
   },
   en: {
     brand_sub: "SONIKS / Ground station",
@@ -46,6 +49,9 @@ const I18N = {
     j_waterfall: "Waterfall", j_count: "Obs.", j_empty: "No observations on this day",
     s_all_sats: "All satellites", s_decoded_only: "Decoded only",
     s_shown: "Waterfalls", s_empty: "No waterfalls for this selection",
+    sat_best: "Best reception", sat_days: "Per day", sat_latest: "Latest observations",
+    sat_obs_total: "Observations total", sat_best_snr: "Best SNR, dB", sat_last: "Last observation",
+    sat_first: "first", sat_date: "Date", sat_none: "No observations of this satellite yet",
   },
 };
 
@@ -262,6 +268,108 @@ async function fillDays(selectId, current) {
   } catch (_) {}
 }
 
+function wfCard(o, withDate = false) {
+  const url = o.waterfall ? fileUrl(o.observation_id, o.waterfall) : null;
+  const freq = o.frequency_hz ? (o.frequency_hz / 1e6).toFixed(3) : "—";
+  const stat = (label, value, cls = "") =>
+    `<div><div class="mini-label">${label}</div><div class="mini-value ${cls}">${value}</div></div>`;
+  const when = withDate && o.started_at ? `${o.started_at.slice(0, 10)} ` : "";
+  return `<div class="wf-card">` +
+    (url ? `<a href="${url}" target="_blank"><img class="wf-big" loading="lazy" src="${url}" alt=""></a>` : "") +
+    `<div class="wf-meta">` +
+    `<div class="wf-title">${esc(o.satellite || `NORAD ${o.norad ?? "—"}`)}<span class="sub">${esc(o.norad)}</span></div>` +
+    `<div class="wf-line">${when}${hms(o.started_at)}–${hms(o.stopped_at)} UTC · #${esc(o.observation_id)}</div>` +
+    `<div class="wf-line">${esc(o.mode)} · ${freq} ${lang === "ru" ? "МГц" : "MHz"}</div>` +
+    `<div class="wf-stats">` +
+    stat(t("j_snr"), db1(o.snr_db), o.decodable ? "ok" : "") +
+    stat(t("j_noise"), db1(o.noise_db)) +
+    stat(t("j_peak"), db1(o.peak_db)) +
+    stat(t("j_packets"), num(o.packets), o.packets ? "ok" : "") +
+    `</div></div></div>`;
+}
+
+/* ---------- satellite ---------- */
+
+let satNorad = null;
+let satData = null;
+
+async function loadSatellites() {
+  try {
+    const list = await (await fetch("/api/satellites", { cache: "no-store" })).json();
+    const select = document.getElementById("sat-select");
+    select.innerHTML = list.map((x) =>
+      `<option value="${x.norad}">${esc(x.satellite || `NORAD ${x.norad}`)} (${x.norad}) — ${num(x.observations)}</option>`).join("");
+    if (!list.length) return;
+    if (!list.some((x) => String(x.norad) === String(satNorad))) satNorad = list[0].norad;
+    select.value = satNorad;
+  } catch (_) {}
+}
+
+async function loadSatellite(norad) {
+  satNorad = norad ?? satNorad;
+  if (satNorad === null) { renderSatellite(); return; }
+  try {
+    satData = await (await fetch(`/api/satellite/${satNorad}`, { cache: "no-store" })).json();
+  } catch (_) { satData = null; }
+  renderSatellite();
+}
+
+function renderSatellite() {
+  const d = satData;
+  const summary = document.getElementById("sat-summary");
+  if (!d || !d.summary.observations) {
+    summary.innerHTML = `<div class="card wide"><div class="card-label">${t("sat_none")}</div></div>`;
+    ["sat-best", "sat-days", "sat-latest"].forEach((id) => { document.getElementById(id).innerHTML = ""; });
+    return;
+  }
+  const s = d.summary;
+  const pct = s.observations ? Math.round((100 * s.decoded) / s.observations) : 0;
+  const last = s.last ? `${s.last.slice(0, 10)} ${hms(s.last)}` : "—";
+  summary.innerHTML =
+    card(t("sat_obs_total"), num(s.observations)) +
+    card(t("j_decoded"), `${num(s.decoded)} <span class="sub">/ ${num(s.observations)} · ${pct}%</span>`) +
+    card(t("j_packets"), num(s.packets)) +
+    card(t("j_images"), num(s.images)) +
+    card(t("j_avg_snr"), db1(s.avg_snr_db)) +
+    card(t("j_avg_noise"), db1(s.avg_noise_db)) +
+    card(t("sat_best_snr"), db1(s.best_snr_db)) +
+    card(t("sat_last"), `${last}`,
+      `<div class="card-sub">${t("sat_first")}: ${s.first ? s.first.slice(0, 10) : "—"}</div>`);
+
+  document.getElementById("sat-best").innerHTML = d.best ? wfCard(d.best, true) : "—";
+
+  document.getElementById("sat-days").innerHTML =
+    `<tr><th>${t("sat_date")}</th><th class="num">${t("j_count")}</th><th class="num">${t("j_decoded")}</th>` +
+    `<th class="num">${t("j_packets")}</th><th class="num">${t("j_snr")}</th><th class="num">${t("sat_best_snr")}</th>` +
+    `<th class="num">${t("j_noise")}</th><th class="num">${t("j_peak")}</th></tr>` +
+    d.days.map((x) =>
+      `<tr><td>${x.date}</td><td class="num">${num(x.observations)}</td>` +
+      `<td class="num${x.decoded ? " ok" : ""}">${num(x.decoded)}</td><td class="num">${num(x.packets)}</td>` +
+      `<td class="num">${db1(x.avg_snr_db)}</td><td class="num">${db1(x.best_snr_db)}</td>` +
+      `<td class="num">${db1(x.avg_noise_db)}</td><td class="num">${db1(x.avg_peak_db)}</td></tr>`).join("");
+
+  document.getElementById("sat-latest").innerHTML =
+    `<tr><th>${t("j_time")}</th><th>${t("j_id")}</th><th>${t("j_mode")}</th><th class="num">${t("j_freq")}</th>` +
+    `<th class="num">${t("j_noise")}</th><th class="num">${t("j_snr")}</th><th class="num">${t("j_peak")}</th>` +
+    `<th class="num">${t("j_packets")}</th><th>${t("j_waterfall")}</th></tr>` +
+    d.latest.map((o) => {
+      const freq = o.frequency_hz ? (o.frequency_hz / 1e6).toFixed(3) : "—";
+      const wf = o.waterfall
+        ? `<a href="${fileUrl(o.observation_id, o.waterfall)}" target="_blank"><img class="wf" loading="lazy" src="${fileUrl(o.observation_id, o.waterfall)}" alt=""></a>`
+        : `<span class="none">—</span>`;
+      return `<tr><td>${o.started_at ? o.started_at.slice(0, 10) : ""} ${hms(o.started_at)}–${hms(o.stopped_at)}</td>` +
+        `<td>${esc(o.observation_id)}</td><td>${esc(o.mode)}</td><td class="num">${freq}</td>` +
+        `<td class="num">${db1(o.noise_db)}</td><td class="num${o.decodable ? " ok" : ""}">${db1(o.snr_db)}</td>` +
+        `<td class="num">${db1(o.peak_db)}</td><td class="num">${num(o.packets)}</td><td>${wf}</td></tr>`;
+    }).join("");
+}
+
+document.getElementById("sat-select").addEventListener("change", (e) => loadSatellite(e.target.value));
+
+function satelliteVisible() {
+  return !document.getElementById("tab-satellite").classList.contains("hidden");
+}
+
 function renderSignal() {
   const d = signalData;
   if (!d) return;
@@ -287,24 +395,8 @@ function renderSignal() {
 
   document.getElementById("s-count").textContent = `${t("s_shown")}: ${list.length}`;
   const grid = document.getElementById("s-grid");
-  grid.innerHTML = list.length ? list.map((o) => {
-    const url = fileUrl(o.observation_id, o.waterfall);
-    const freq = o.frequency_hz ? (o.frequency_hz / 1e6).toFixed(3) : "—";
-    const stat = (label, value, cls = "") =>
-      `<div><div class="mini-label">${label}</div><div class="mini-value ${cls}">${value}</div></div>`;
-    return `<div class="wf-card">` +
-      `<a href="${url}" target="_blank"><img class="wf-big" loading="lazy" src="${url}" alt=""></a>` +
-      `<div class="wf-meta">` +
-      `<div class="wf-title">${esc(o.satellite || `NORAD ${o.norad ?? "—"}`)}<span class="sub">${esc(o.norad)}</span></div>` +
-      `<div class="wf-line">${hms(o.started_at)}–${hms(o.stopped_at)} UTC · #${esc(o.observation_id)}</div>` +
-      `<div class="wf-line">${esc(o.mode)} · ${freq} ${lang === "ru" ? "МГц" : "MHz"}</div>` +
-      `<div class="wf-stats">` +
-      stat(t("j_snr"), db1(o.snr_db), o.decodable ? "ok" : "") +
-      stat(t("j_noise"), db1(o.noise_db)) +
-      stat(t("j_peak"), db1(o.peak_db)) +
-      stat(t("j_packets"), num(o.packets), o.packets ? "ok" : "") +
-      `</div></div></div>`;
-  }).join("") : `<div class="card wide"><div class="card-label">${t("s_empty")}</div></div>`;
+  grid.innerHTML = list.length ? list.map((o) => wfCard(o)).join("")
+    : `<div class="card wide"><div class="card-label">${t("s_empty")}</div></div>`;
 }
 
 async function loadSignal(dayValue) {
@@ -345,6 +437,7 @@ function applyLang() {
   renderCompare();
   renderJournal();
   renderSignal();
+  renderSatellite();
 }
 
 function pad(n) { return String(n).padStart(2, "0"); }
@@ -420,7 +513,9 @@ document.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("cli
   document.getElementById("tab-station").classList.toggle("hidden", tab !== "station");
   document.getElementById("tab-journal").classList.toggle("hidden", tab !== "journal");
   document.getElementById("tab-signal").classList.toggle("hidden", tab !== "signal");
-  document.getElementById("tab-placeholder").classList.toggle("hidden", ["station", "journal", "signal"].includes(tab));
+  document.getElementById("tab-satellite").classList.toggle("hidden", tab !== "satellite");
+  document.getElementById("tab-placeholder").classList.toggle("hidden", ["station", "journal", "signal", "satellite"].includes(tab));
+  if (tab === "satellite") loadSatellites().then(() => loadSatellite());
   if (tab === "journal") loadJournalDays().then(() => loadJournal());
   if (tab === "signal") fillDays("s-day", signalDay).then(() => loadSignal());
 }));
@@ -434,4 +529,5 @@ setInterval(loadOnline, 300000);
 setInterval(() => {
   if (journalVisible() && journalDay === utcToday()) loadJournalDays().then(() => loadJournal());
   if (signalVisible() && signalDay === utcToday()) fillDays("s-day", signalDay).then(() => loadSignal());
+  if (satelliteVisible()) loadSatellites().then(() => loadSatellite());
 }, 60000);
