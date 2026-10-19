@@ -1,0 +1,97 @@
+# Monitor addon — optional.
+# Start together with the main station file:
+#   docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d
+# Relative paths below are resolved from ~/soniks-client-new (the directory of
+# the first compose file).
+# Only 3-month data and images live on the second disk (./data -> /mnt/sdb2).
+
+services:
+
+  # Completed observations (.ogg, waterfall .png, decoded images, metadata)
+  # go to the second disk instead of being deleted after upload.
+  soniks-client:
+    environment:
+      OBSERVATION__REMOVE_OBSERVATION_DATA: "False"
+    volumes:
+      - ./data/complete:/var/lib/soniks-client/data/complete
+
+  monitor:
+    build:
+      context: ./addons/monitor/app
+      additional_contexts:
+        db_dev: ./libs/db_dev2.1.0
+      args:
+        PYTHON_BRANCH: "3.15"
+        UV_BRANCH: "main"
+        DUCKDB_CORE_REF: "e08224d653fcade680e471709e9a9035223989df"
+        FASTAPI_REF: "master"
+        UVICORN_REF: "main"
+        PAHO_REF: "master"
+    image: soniks-monitor:local
+    container_name: monitor
+    environment:
+      STATION__ID: ${STATION__ID}
+      URL__BASE: ${URL__BASE}
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./data/complete:/data/complete
+      - ./data/monitor:/data/monitor
+      - ./soniks-client/soniks-satyaml/satyaml:/satyaml:ro
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    volumes:
+      - ./addons/monitor/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2
+    container_name: influxdb
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_USER}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG: soniks
+      DOCKER_INFLUXDB_INIT_BUCKET: soniks
+      DOCKER_INFLUXDB_INIT_RETENTION: 90d
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN}
+    volumes:
+      - ./data/influxdb:/var/lib/influxdb2
+    restart: unless-stopped
+
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    environment:
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+    volumes:
+      - ./addons/monitor/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    depends_on:
+      - mosquitto
+      - influxdb
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./addons/monitor/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+
+volumes:
+  mosquitto-data:
+  grafana-data:
