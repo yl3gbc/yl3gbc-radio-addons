@@ -1,9 +1,91 @@
-# Установка: клиент СОНИКС из исходников + SONIKS Monitor
+# Установка SONIKS Monitor: на работающую станцию или с клиентом СОНИКС из исходников
 
-Пошаговая инструкция: собрать клиента СОНИКС из исходников (amd64), поставить монитор
-с библиотекой `db_dev2.1.0`, запустить, проверить и обновлять после новых коммитов.
+> **Альфа-версия 0.0.0** — для пробы и тестирования.
+
+Пошаговая инструкция в двух вариантах:
+
+- **шаг 0** — добавить монитор на уже работающую станцию СОНИКС, клиента не трогая;
+- **шаги 1–11** — собрать клиента СОНИКС из исходников (amd64), поставить монитор
+  с библиотекой `db_dev2.1.0`, запустить, проверить и обновлять после новых коммитов.
 
 Всё время — **UTC**. Команды выполняются по одной.
+
+## 0. Монитор на уже работающую станцию (без сборки клиента)
+
+Если станция СОНИКС уже работает (официальный образ клиента, установка по инструкции СОНИКС),
+клиента пересобирать не нужно — достаточно добавить монитор. Ниже `<папка станции>` — папка,
+где лежат `docker-compose.yml` и `.env` вашей станции.
+
+Нужны Docker Compose **2.17 или новее** и около 10 ГБ места. Монитор собирается из исходников:
+на amd64 первый раз 30–60 минут, на Raspberry Pi (arm64) — несколько часов.
+
+### 0.1. Монитор и библиотека
+
+```
+cd ~
+git clone --branch monitor --single-branch https://github.com/yl3gbc/yl3gbc-radio-addons.git yl3gbc-monitor
+git clone --branch db_dev2.1.0 --single-branch https://github.com/yl3gbc/yl3gbc-radio-addons.git yl3gbc-db_dev
+cd <папка станции>
+mkdir -p addons
+mkdir -p libs
+cp -r ~/yl3gbc-monitor/addons/monitor addons/
+cp -r ~/yl3gbc-db_dev/libs/db_dev2.1.0 libs/
+```
+
+### 0.2. Описания спутников (satyaml)
+
+Монитор берёт названия спутников из `soniks-client/soniks-satyaml/satyaml` в папке станции.
+Клиента собирать не нужно — только исходники с описаниями:
+
+```
+cd <папка станции>
+git clone --depth 1 --branch soniks https://gitlab.com/space-education-development/soniks/client/soniks-client.git soniks-client
+cd <папка станции>/soniks-client
+git submodule update --init --depth 1 soniks-satyaml
+ls soniks-satyaml/satyaml | head
+```
+
+### 0.3. Папка данных и .env
+
+```
+cd <папка станции>
+mkdir -p data
+```
+
+(или ссылка `data` на второй диск — см. шаг 5).
+
+Добавьте в `.env` станции:
+
+```
+INFLUX_USER=...
+INFLUX_PASSWORD=...
+INFLUX_TOKEN=...
+GRAFANA_PASSWORD=...
+```
+
+### 0.4. Сборка и запуск
+
+```
+cd <папка станции>
+docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml build monitor
+docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d
+```
+
+`up -d` с файлом монитора пересоздаёт контейнер клиента: в нём включается сохранение
+наблюдений в `./data/complete`. Клиент перезапускается за несколько секунд; не делайте этого
+во время наблюдения (ближайшее — в `docker logs soniks-client`).
+
+### 0.5. Проверка
+
+Как в шаге 7. Монитор — http://127.0.0.1:8090, Grafana — http://127.0.0.1:3000.
+
+### 0.6. Агент
+
+`soniks-agent` обновляет клиента по команде портала. Если после такого обновления
+`docker exec soniks-client printenv OBSERVATION__REMOVE_OBSERVATION_DATA` показывает не `False`,
+клиент был пересоздан без файла монитора — запустите шаг 0.4 (`up -d`) ещё раз.
+
+Остальные разделы ниже — полная установка с клиентом, собранным из исходников.
 
 ## 1. Что нужно
 
