@@ -152,6 +152,18 @@ button, input, select { font: inherit; color: inherit; }
 .wf-stats > div { background: var(--card-in); border-radius: 6px; padding: 4px 6px; }
 .wf-stats .mini-value.ok { color: #9eeed0; }
 
+/* satellite */
+.journal-bar .wide-select {
+  min-width: 320px; background: var(--card); border: 1px solid var(--line); border-radius: 9px;
+  padding: 7.5px 9px; font-size: 11px; font-weight: 700; outline: none;
+}
+.journal-bar .wide-select:focus { border-color: var(--accent); }
+.sat-top { display: grid; grid-template-columns: 250px 1fr; gap: 9px; align-items: start; }
+.sat-top .panel { margin-bottom: 12px; }
+.sat-days .table-wrap { max-height: 520px; overflow-y: auto; }
+.card-value .sub { color: var(--muted); font-size: 11px; font-weight: 600; }
+@media (max-width: 760px) { .sat-top { grid-template-columns: 1fr; } }
+
 .hidden { display: none !important; }
 
 @media (max-width: 640px) {
