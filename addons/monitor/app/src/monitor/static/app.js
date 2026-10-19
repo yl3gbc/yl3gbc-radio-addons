@@ -21,6 +21,8 @@ const I18N = {
     j_avg_peak: "Средний пик, дБ", j_time: "Время UTC", j_id: "Наблюдение", j_sat: "Спутник",
     j_mode: "Режим", j_freq: "Частота, МГц", j_noise: "Шум, дБ", j_snr: "SNR, дБ", j_peak: "Пик, дБ",
     j_waterfall: "Водопад", j_count: "Набл.", j_empty: "За этот день наблюдений нет",
+    s_all_sats: "Все спутники", s_decoded_only: "Только декодированные",
+    s_shown: "Водопадов", s_empty: "Нет водопадов по этому выбору",
   },
   en: {
     brand_sub: "SONIKS / Ground station",
@@ -42,6 +44,8 @@ const I18N = {
     j_avg_peak: "Average peak, dB", j_time: "Time UTC", j_id: "Observation", j_sat: "Satellite",
     j_mode: "Mode", j_freq: "Frequency, MHz", j_noise: "Noise, dB", j_snr: "SNR, dB", j_peak: "Peak, dB",
     j_waterfall: "Waterfall", j_count: "Obs.", j_empty: "No observations on this day",
+    s_all_sats: "All satellites", s_decoded_only: "Decoded only",
+    s_shown: "Waterfalls", s_empty: "No waterfalls for this selection",
   },
 };
 
@@ -242,6 +246,93 @@ document.getElementById("j-obs").addEventListener("click", async (e) => {
   row.after(tr);
 });
 
+/* ---------- signal / waterfall ---------- */
+
+let signalDay = null;
+let signalData = null;
+
+async function fillDays(selectId, current) {
+  try {
+    const list = await (await fetch("/api/journal/days", { cache: "no-store" })).json();
+    const today = utcToday();
+    if (!list.some((x) => x.date === today)) list.unshift({ date: today, observations: 0 });
+    const select = document.getElementById(selectId);
+    select.innerHTML = list.map((x) => `<option value="${x.date}">${x.date} (${x.observations})</option>`).join("");
+    select.value = current || today;
+  } catch (_) {}
+}
+
+function renderSignal() {
+  const d = signalData;
+  if (!d) return;
+  const satSelect = document.getElementById("s-sat");
+  const keep = satSelect.value;
+  const sats = new Map();
+  for (const o of d.observations) {
+    if (o.waterfall) sats.set(String(o.norad), o.satellite || `NORAD ${o.norad ?? "—"}`);
+  }
+  satSelect.querySelectorAll("option[data-norad]").forEach((o) => o.remove());
+  [...sats.entries()].sort((a, b) => a[1].localeCompare(b[1])).forEach(([norad, name]) => {
+    const o = document.createElement("option");
+    o.value = norad;
+    o.dataset.norad = norad;
+    o.textContent = `${name} (${norad})`;
+    satSelect.appendChild(o);
+  });
+  satSelect.value = sats.has(keep) ? keep : "";
+
+  const onlyDecoded = document.getElementById("s-decoded").checked;
+  const list = d.observations.slice().reverse().filter((o) =>
+    o.waterfall && (!satSelect.value || String(o.norad) === satSelect.value) && (!onlyDecoded || o.decodable));
+
+  document.getElementById("s-count").textContent = `${t("s_shown")}: ${list.length}`;
+  const grid = document.getElementById("s-grid");
+  grid.innerHTML = list.length ? list.map((o) => {
+    const url = fileUrl(o.observation_id, o.waterfall);
+    const freq = o.frequency_hz ? (o.frequency_hz / 1e6).toFixed(3) : "—";
+    const stat = (label, value, cls = "") =>
+      `<div><div class="mini-label">${label}</div><div class="mini-value ${cls}">${value}</div></div>`;
+    return `<div class="wf-card">` +
+      `<a href="${url}" target="_blank"><img class="wf-big" loading="lazy" src="${url}" alt=""></a>` +
+      `<div class="wf-meta">` +
+      `<div class="wf-title">${esc(o.satellite || `NORAD ${o.norad ?? "—"}`)}<span class="sub">${esc(o.norad)}</span></div>` +
+      `<div class="wf-line">${hms(o.started_at)}–${hms(o.stopped_at)} UTC · #${esc(o.observation_id)}</div>` +
+      `<div class="wf-line">${esc(o.mode)} · ${freq} ${lang === "ru" ? "МГц" : "MHz"}</div>` +
+      `<div class="wf-stats">` +
+      stat(t("j_snr"), db1(o.snr_db), o.decodable ? "ok" : "") +
+      stat(t("j_noise"), db1(o.noise_db)) +
+      stat(t("j_peak"), db1(o.peak_db)) +
+      stat(t("j_packets"), num(o.packets), o.packets ? "ok" : "") +
+      `</div></div></div>`;
+  }).join("") : `<div class="card wide"><div class="card-label">${t("s_empty")}</div></div>`;
+}
+
+async function loadSignal(dayValue) {
+  signalDay = dayValue || signalDay || utcToday();
+  document.getElementById("s-day").value = signalDay;
+  try {
+    signalData = await (await fetch(`/api/journal/${signalDay}`, { cache: "no-store" })).json();
+    renderSignal();
+  } catch (_) {}
+}
+
+function stepSignal(delta) {
+  const select = document.getElementById("s-day");
+  const i = select.selectedIndex - delta;
+  if (i >= 0 && i < select.options.length) loadSignal(select.options[i].value);
+}
+
+document.getElementById("s-day").addEventListener("change", (e) => loadSignal(e.target.value));
+document.getElementById("s-prev").addEventListener("click", () => stepSignal(-1));
+document.getElementById("s-next").addEventListener("click", () => stepSignal(1));
+document.getElementById("s-today").addEventListener("click", () => loadSignal(utcToday()));
+document.getElementById("s-sat").addEventListener("change", renderSignal);
+document.getElementById("s-decoded").addEventListener("change", renderSignal);
+
+function signalVisible() {
+  return !document.getElementById("tab-signal").classList.contains("hidden");
+}
+
 function journalVisible() {
   return !document.getElementById("tab-journal").classList.contains("hidden");
 }
@@ -253,6 +344,7 @@ function applyLang() {
   renderOverview();
   renderCompare();
   renderJournal();
+  renderSignal();
 }
 
 function pad(n) { return String(n).padStart(2, "0"); }
@@ -327,8 +419,10 @@ document.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("cli
   const tab = el.dataset.tab;
   document.getElementById("tab-station").classList.toggle("hidden", tab !== "station");
   document.getElementById("tab-journal").classList.toggle("hidden", tab !== "journal");
-  document.getElementById("tab-placeholder").classList.toggle("hidden", tab === "station" || tab === "journal");
+  document.getElementById("tab-signal").classList.toggle("hidden", tab !== "signal");
+  document.getElementById("tab-placeholder").classList.toggle("hidden", ["station", "journal", "signal"].includes(tab));
   if (tab === "journal") loadJournalDays().then(() => loadJournal());
+  if (tab === "signal") fillDays("s-day", signalDay).then(() => loadSignal());
 }));
 
 applyLang();
@@ -339,4 +433,5 @@ setInterval(loadOverview, 30000);
 setInterval(loadOnline, 300000);
 setInterval(() => {
   if (journalVisible() && journalDay === utcToday()) loadJournalDays().then(() => loadJournal());
+  if (signalVisible() && signalDay === utcToday()) fillDays("s-day", signalDay).then(() => loadSignal());
 }, 60000);
