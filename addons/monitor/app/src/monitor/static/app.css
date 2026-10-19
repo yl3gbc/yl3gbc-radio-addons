@@ -1,4 +1,6 @@
 :root {
+  --c-decoded: #1fa3b2;
+  --c-other: #7d6fd6;
   --bg-top: #0a141b;
   --bg-1: #0f2b36;
   --bg-2: #0a1820;
@@ -193,6 +195,33 @@ button, input, select { font: inherit; color: inherit; }
 .tbl tr.pick { cursor: pointer; }
 .tbl .run { color: #9eeed0; font-weight: 800; }
 @media (max-width: 760px) { .map-top { grid-template-columns: 1fr; } }
+
+/* history */
+.journal-bar .pill .sub, .journal-bar .pill span { text-transform: none; }
+.chart-panel { position: relative; }
+.chart-head { display: flex; justify-content: space-between; align-items: center; gap: 9px; }
+.legend { display: flex; gap: 12px; font-size: 9.5px; color: var(--muted); }
+.legend span { display: flex; align-items: center; gap: 5px; }
+.legend .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart .gl { stroke: #15303a; stroke-width: 1; }
+.chart .ax { fill: #8ea3ab; font-size: 10px; }
+.chart .hit { fill: transparent; cursor: crosshair; }
+.chart .hit:hover { fill: rgba(95, 227, 240, .06); }
+.chart .ln { fill: none; stroke: var(--c-decoded); stroke-width: 2; }
+.chart .dot { fill: var(--c-decoded); stroke: var(--card); stroke-width: 2; }
+.charts2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.charts2 .panel { margin-bottom: 12px; }
+.chart-tip {
+  position: fixed; pointer-events: none; z-index: 10; background: #0d1f28; border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 9px; font-size: 10.5px; line-height: 1.6; box-shadow: 0 6px 18px rgba(0,0,0,.4);
+}
+.chart-tip b { color: var(--text); }
+.chart-tip .k { color: var(--muted); }
+.chart-tip .sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 5px; }
+details.panel summary { cursor: pointer; margin-bottom: 0; }
+details.panel[open] summary { margin-bottom: 9px; }
+@media (max-width: 760px) { .charts2 { grid-template-columns: 1fr; } }
 
 .hidden { display: none !important; }
 
