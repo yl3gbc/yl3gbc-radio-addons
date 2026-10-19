@@ -1,0 +1,1 @@
+"""SONIKS Monitor addon."""
