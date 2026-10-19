@@ -87,6 +87,19 @@
         </div>
       </div>
 
+      <div id="tab-signal" class="tab hidden">
+        <div class="journal-bar">
+          <button class="pill" id="s-prev" type="button">◀</button>
+          <select id="s-day"></select>
+          <button class="pill" id="s-next" type="button">▶</button>
+          <button class="pill" id="s-today" type="button" data-i18n="j_today"></button>
+          <select id="s-sat"><option value="" data-i18n="s_all_sats"></option></select>
+          <label class="check"><input type="checkbox" id="s-decoded"> <span data-i18n="s_decoded_only"></span></label>
+        </div>
+        <div class="wf-count" id="s-count"></div>
+        <div class="wf-grid" id="s-grid"></div>
+      </div>
+
       <div id="tab-placeholder" class="tab hidden">
         <div class="card wide"><div class="card-label" data-i18n="soon"></div></div>
       </div>
