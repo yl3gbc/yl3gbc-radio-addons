@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from monitor import collector, db, journal, orbit, portal, satellite
+from monitor import collector, db, history, journal, orbit, portal, satellite
 from monitor.config import settings
 
 STATIC = Path(str(resources.files("monitor") / "static"))
@@ -132,6 +132,11 @@ def satellites_list():
 @app.get("/api/satellite/{norad}")
 def satellite_detail(norad: int):
     return JSONResponse(satellite.satellite(norad), headers=NO_STORE)
+
+
+@app.get("/api/history")
+def history_view(days: int = 30):
+    return JSONResponse(history.history(days), headers=NO_STORE)
 
 
 @app.get("/api/orbit")
