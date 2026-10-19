@@ -1,0 +1,70 @@
+db_dev2.1.0
+===========
+
+What it does
+------------
+db_dev lets Python 3.15 use DuckDB 2.1.0-dev (commit e08224d653) directly
+through the DuckDB C API. It replaces duckdb-python: there is no compiled
+C++ binding, no pybind/nanobind and no numpy. The library is pure Python
+and uses only the standard library (ctypes, struct, threading, datetime).
+
+It loads libduckdb.so, which is built from DuckDB source, and calls the C API
+functions (duckdb_open, duckdb_prepare, duckdb_execute_prepared,
+duckdb_fetch_chunk, ...) itself.
+
+Why it exists
+-------------
+- DuckDB 2.1.0-dev (main, commit e08224d653) is a mandatory requirement.
+- The official Python binding duckdb-python, branch main (last change
+  2026-09-03), does not compile against DuckDB 2.1.0-dev: DuckDB changed
+  its internal API (e.g. duckdb/main/chunk_scan_state.hpp was removed),
+  and the binding still uses the old one.
+- The only duckdb-python branches that compile against it are v2.0-cyanoptera
+  and branches derived from it, and those are not allowed here.
+- The SONIKS ARM version uses its own binding written for ARM (core level,
+  assembly), which cannot be used on amd.
+- So the amd version gets its own small library that needs no compiled
+  binding at all: DuckDB's C API is stable, and calling it through ctypes
+  works with the exact DuckDB build that is required.
+- It also removes numpy, patchelf and the C++ binding build from the
+  monitor image.
+
+Where libduckdb.so is searched
+------------------------------
+1. environment variable DB_DEV_LIBRARY
+2. /opt/duckdb/lib/libduckdb.so
+3. the system library search path
+
+Usage
+-----
+    import db_dev
+
+    con = db_dev.connect("/data/monitor/monitor.duckdb")   # None = in memory
+    cur = con.cursor()
+    cur.execute("SELECT ? AS answer", [42])
+    cur.description        # [("answer", "INTEGER")]
+    cur.fetchall()         # [(42,)]
+    cur.fetchone()
+    cur.rowcount           # rows changed by INSERT/UPDATE/DELETE
+    con.close()
+
+    db_dev.library_version()   # version of the loaded libduckdb
+    db_dev.Error               # every DuckDB error (prepare, bind, execute)
+
+Every query is a prepared statement; one connection is used from one thread
+at a time (an internal lock guards it).
+
+Parameters (Python -> DuckDB)
+-----------------------------
+None -> NULL, bool -> BOOLEAN, int -> BIGINT, float -> DOUBLE, str -> VARCHAR,
+datetime -> TIMESTAMP (naive = UTC; aware is converted to UTC),
+date -> DATE, list/tuple of str -> VARCHAR[]
+
+Results (DuckDB -> Python)
+--------------------------
+BOOLEAN, TINYINT..BIGINT, UTINYINT..UBIGINT, HUGEINT -> int/bool
+FLOAT, DOUBLE -> float
+VARCHAR -> str, BLOB -> bytes
+DATE -> date, TIMESTAMP -> naive datetime (UTC), TIMESTAMPTZ -> datetime UTC
+LIST of the above -> list
+Any other type raises db_dev.Error.
