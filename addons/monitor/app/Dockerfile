@@ -90,6 +90,12 @@ RUN uv venv --python /opt/python/bin/python3 /opt/monitor && \
 COPY --from=db_dev . /src/db_dev
 RUN uv pip install --python /opt/monitor/bin/python --no-deps /src/db_dev
 
+# sgp4 (orbits for the Orbit / Map tab), from source; own layer so the packages above stay cached
+ARG SGP4_REF
+RUN test -n "$SGP4_REF" || { echo "Set SGP4_REF"; exit 1; }
+RUN uv pip install --python /opt/monitor/bin/python --no-binary :all: \
+        "sgp4 @ git+https://github.com/brandon-rhodes/python-sgp4.git@${SGP4_REF}"
+
 # Check db_dev against the freshly built libduckdb before going further
 COPY --from=duckdb /opt/duckdb /opt/duckdb
 RUN /opt/monitor/bin/python -c "import db_dev; print('libduckdb', db_dev.library_version()); print(db_dev.connect().execute('SELECT 42 AS answer').fetchall())"
