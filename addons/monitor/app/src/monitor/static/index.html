@@ -66,6 +66,27 @@
         <div class="grid4" id="system"></div>
       </div>
 
+      <div id="tab-satellite" class="tab hidden">
+        <div class="journal-bar">
+          <select id="sat-select" class="wide-select"></select>
+        </div>
+        <div class="grid4" id="sat-summary"></div>
+        <div class="sat-top">
+          <div class="panel sat-best">
+            <div class="panel-title" data-i18n="sat_best"></div>
+            <div id="sat-best"></div>
+          </div>
+          <div class="panel sat-days">
+            <div class="panel-title" data-i18n="sat_days"></div>
+            <div class="table-wrap"><table class="tbl" id="sat-days"></table></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title" data-i18n="sat_latest"></div>
+          <div class="table-wrap"><table class="tbl" id="sat-latest"></table></div>
+        </div>
+      </div>
+
       <div id="tab-journal" class="tab hidden">
         <div class="journal-bar">
           <button class="pill" id="j-prev" type="button">◀</button>
