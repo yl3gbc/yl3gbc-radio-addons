@@ -120,6 +120,12 @@ def today(station_id: int) -> dict | None:
     return _cached(("today", station_id), fetch)
 
 
+def jobs(station_id: int) -> list[dict] | None:
+    """All jobs of the station from ``/api/jobs/`` (with TLE), cached for ``portal_interval``."""
+
+    return _cached(("joblist", station_id), lambda: list(_pages("jobs/", {"ground_station": station_id})))
+
+
 def future_jobs(station_id: int) -> int | None:
     """Number of jobs from ``/api/jobs/`` that have not started yet."""
 
