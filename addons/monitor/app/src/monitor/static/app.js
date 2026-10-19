@@ -29,6 +29,10 @@ const I18N = {
     m_map: "Карта", m_polar: "Пролёт над станцией", m_passes: "Ближайшие пролёты (24 ч)",
     m_max_el: "Макс. угол", m_az: "Азимут AOS → LOS", m_in: "Через", m_running: "идёт",
     m_alt: "Высота", m_none: "Ближайших пролётов нет", m_max_at: "максимум в",
+    h_days: "дней", h_obs_chart: "Наблюдения по дням", h_not_decoded: "Без декодирования",
+    h_packets_chart: "Пакеты по дням", h_sats_chart: "Спутники по дням", h_snr_chart: "Средний SNR по дням, дБ",
+    h_noise_chart: "Средний шум по дням, дБ", h_table: "Таблица по дням", h_active: "Активных дней",
+    h_best: "Лучший день", h_sats: "Спутников",
   },
   en: {
     brand_sub: "SONIKS / Ground station",
@@ -58,6 +62,10 @@ const I18N = {
     m_map: "Map", m_polar: "Pass over the station", m_passes: "Upcoming passes (24 h)",
     m_max_el: "Max elevation", m_az: "Azimuth AOS → LOS", m_in: "Starts in", m_running: "running",
     m_alt: "Altitude", m_none: "No upcoming passes", m_max_at: "maximum at",
+    h_days: "days", h_obs_chart: "Observations per day", h_not_decoded: "Not decoded",
+    h_packets_chart: "Packets per day", h_sats_chart: "Satellites per day", h_snr_chart: "Average SNR per day, dB",
+    h_noise_chart: "Average noise per day, dB", h_table: "Table per day", h_active: "Active days",
+    h_best: "Best day", h_sats: "Satellites",
   },
 };
 
@@ -376,6 +384,185 @@ function satelliteVisible() {
   return !document.getElementById("tab-satellite").classList.contains("hidden");
 }
 
+/* ---------- history ---------- */
+
+let historyDays = 30;
+let historyData = null;
+let CW = 960;
+const CH = 200, PL = 44, PR = 8, PT = 10, PB = 26;
+
+function niceMax(v) {
+  // 4 grid steps of a "nice" size, so every tick is a round number
+  if (v <= 0) return 4;
+  const raw = v / 4, p = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 5, 10].map((m) => m * p).find((m) => m >= raw);
+  return Math.max(4, step * 4);
+}
+
+function xLabels(series, x, bw) {
+  const room = Math.max(1, Math.floor((CW - PL - PR) / 46));
+  const every = Math.max(1, Math.ceil(series.length / room));
+  return series.map((d, i) => (i % every === 0 || i === series.length - 1) && !(i === series.length - 1 && i % every && i % every < every / 2)
+    ? `<text class="ax" x="${x(i) + bw / 2}" y="${CH - 8}" text-anchor="middle">${d.date.slice(5)}</text>` : "").join("");
+}
+
+function yAxis(lo, hi, y, fmt) {
+  let out = "";
+  for (let k = 0; k <= 4; k++) {
+    const v = lo + ((hi - lo) * k) / 4;
+    out += `<line class="gl" x1="${PL}" x2="${CW - PR}" y1="${y(v)}" y2="${y(v)}"/>` +
+      `<text class="ax" x="${PL - 6}" y="${y(v) + 3}" text-anchor="end">${fmt(v)}</text>`;
+  }
+  return out;
+}
+
+function barPath(x, yTop, w, h, r) {
+  // rounded top corners only, flat on the baseline
+  if (h <= 0) return "";
+  r = Math.min(r, w / 2, h);
+  return `M${x},${yTop + h}V${yTop + r}Q${x},${yTop} ${x + r},${yTop}H${x + w - r}Q${x + w},${yTop} ${x + w},${yTop + r}V${yTop + h}Z`;
+}
+
+function chartWidth(el) {
+  // draw in the element's own pixel width so text stays at its real size
+  CW = Math.max(320, Math.round(el.clientWidth || 960));
+}
+
+function barChart(el, series, stacks, tip) {
+  chartWidth(el);
+  // stacks: [{key, color}] bottom -> top
+  const n = series.length, iw = CW - PL - PR, ih = CH - PT - PB;
+  const slot = iw / n, bw = Math.min(46, Math.max(2, slot - 2));
+  const max = niceMax(Math.max(...series.map((d) => stacks.reduce((a, s) => a + (d[s.key] || 0), 0))));
+  const x = (i) => PL + i * slot + (slot - bw) / 2;
+  const y = (v) => PT + ih - (v / max) * ih;
+  let svg = yAxis(0, max, y, (v) => num(Math.round(v)));
+  series.forEach((d, i) => {
+    let base = 0;
+    stacks.forEach((s, k) => {
+      const v = d[s.key] || 0;
+      if (!v) return;
+      const top = y(base + v), h = y(base) - top - (base ? 2 : 0);
+      const isTop = stacks.slice(k + 1).every((t) => !(d[t.key] || 0));
+      svg += isTop ? `<path d="${barPath(x(i), top, bw, h, 3)}" fill="${s.color}"/>`
+        : `<rect x="${x(i)}" y="${top}" width="${bw}" height="${Math.max(h, 0)}" fill="${s.color}"/>`;
+      base += v;
+    });
+    svg += `<rect class="hit" x="${PL + i * slot}" y="${PT}" width="${slot}" height="${ih}" data-i="${i}"/>`;
+  });
+  svg += xLabels(series, x, bw);
+  el.innerHTML = `<svg viewBox="0 0 ${CW} ${CH}">${svg}</svg>`;
+  bindTip(el, series, tip);
+}
+
+function lineChart(el, series, key, tip) {
+  chartWidth(el);
+  const n = series.length, iw = CW - PL - PR, ih = CH - PT - PB, slot = iw / n;
+  const vals = series.map((d) => d[key]).filter((v) => v !== null && v !== undefined);
+  if (!vals.length) { el.innerHTML = `<div class="empty">—</div>`; return; }
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const raw = Math.max(0.5, (hi - lo) * 1.3) / 4, p10 = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * p10).find((m) => m >= raw);
+  lo = Math.floor((lo - step * 0.5) / step) * step;
+  hi = lo + step * 4;
+  while (hi < Math.max(...vals)) { lo += step; hi += step; }
+  const x = (i) => PL + i * slot + slot / 2;
+  const y = (v) => PT + ih - ((v - lo) / (hi - lo)) * ih;
+  let svg = yAxis(lo, hi, y, (v) => v.toFixed(step < 1 ? 1 : 0));
+  let path = "", open = false;
+  series.forEach((d, i) => {
+    const v = d[key];
+    if (v === null || v === undefined) { open = false; return; }
+    path += `${open ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+    open = true;
+  });
+  svg += `<path class="ln" d="${path}"/>`;
+  if (n <= 31) series.forEach((d, i) => { if (d[key] !== null && d[key] !== undefined) svg += `<circle class="dot" cx="${x(i)}" cy="${y(d[key])}" r="4"/>`; });
+  series.forEach((d, i) => { svg += `<rect class="hit" x="${PL + i * slot}" y="${PT}" width="${slot}" height="${ih}" data-i="${i}"/>`; });
+  svg += xLabels(series, (i) => PL + i * slot, slot);
+  el.innerHTML = `<svg viewBox="0 0 ${CW} ${CH}">${svg}</svg>`;
+  bindTip(el, series, tip);
+}
+
+function bindTip(el, series, tip) {
+  const box = document.getElementById("h-tip");
+  el.querySelectorAll(".hit").forEach((r) => {
+    r.addEventListener("mousemove", (e) => {
+      box.innerHTML = tip(series[Number(r.dataset.i)]);
+      box.classList.remove("hidden");
+      const w = box.offsetWidth;
+      box.style.left = `${Math.min(e.clientX + 14, window.innerWidth - w - 8)}px`;
+      box.style.top = `${e.clientY + 14}px`;
+    });
+    r.addEventListener("mouseleave", () => box.classList.add("hidden"));
+  });
+}
+
+function renderHistory() {
+  const d = historyData;
+  if (!d) return;
+  const s = d.summary;
+  const pct = s.observations ? Math.round((100 * s.decoded) / s.observations) : 0;
+  document.getElementById("h-range").textContent = `${d.from} — ${d.to} UTC`;
+  document.getElementById("h-summary").innerHTML =
+    card(t("j_obs"), num(s.observations)) +
+    card(t("j_decoded"), `${num(s.decoded)} <span class="sub">· ${pct}%</span>`) +
+    card(t("j_packets"), num(s.packets)) +
+    card(t("h_sats"), num(s.satellites)) +
+    card(t("j_avg_snr"), db1(s.avg_snr_db)) +
+    card(t("j_avg_noise"), db1(s.avg_noise_db)) +
+    card(t("h_active"), `${num(s.active_days)} <span class="sub">/ ${d.days}</span>`) +
+    card(t("h_best"), s.best_day || "—", s.best_day ? `<div class="card-sub">${t("j_decoded")}: ${num(s.best_day_decoded)}</div>` : "");
+
+  const sw = (c) => `<i class="sw" style="background:${c}"></i>`;
+  const head = (x) => `<b>${x.date}</b><br>`;
+  barChart(document.getElementById("h-obs"), d.series,
+    [{ key: "decoded", color: "var(--c-decoded)" }, { key: "other", color: "var(--c-other)" }].map((st) => st),
+    (x) => head(x) + `${sw("var(--c-decoded)")}<span class="k">${t("j_decoded")}:</span> <b>${num(x.decoded)}</b><br>` +
+      `${sw("var(--c-other)")}<span class="k">${t("h_not_decoded")}:</span> <b>${num(x.observations - x.decoded)}</b><br>` +
+      `<span class="k">${t("j_obs")}:</span> <b>${num(x.observations)}</b>`);
+  barChart(document.getElementById("h-packets"), d.series, [{ key: "packets", color: "var(--c-decoded)" }],
+    (x) => head(x) + `<span class="k">${t("j_packets")}:</span> <b>${num(x.packets)}</b>`);
+  barChart(document.getElementById("h-sats"), d.series, [{ key: "satellites", color: "var(--c-decoded)" }],
+    (x) => head(x) + `<span class="k">${t("h_sats")}:</span> <b>${num(x.satellites)}</b>`);
+  lineChart(document.getElementById("h-snr"), d.series, "avg_snr_db",
+    (x) => head(x) + `<span class="k">SNR:</span> <b>${db1(x.avg_snr_db)} dB</b>`);
+  lineChart(document.getElementById("h-noise"), d.series, "avg_noise_db",
+    (x) => head(x) + `<span class="k">${t("j_noise")}:</span> <b>${db1(x.avg_noise_db)}</b>`);
+
+  document.getElementById("h-table").innerHTML =
+    `<tr><th>${t("sat_date")}</th><th class="num">${t("j_obs")}</th><th class="num">${t("j_decoded")}</th>` +
+    `<th class="num">${t("j_packets")}</th><th class="num">${t("h_sats")}</th><th class="num">${t("j_snr")}</th>` +
+    `<th class="num">${t("j_noise")}</th></tr>` +
+    d.series.slice().reverse().map((x) =>
+      `<tr><td>${x.date}</td><td class="num">${num(x.observations)}</td><td class="num">${num(x.decoded)}</td>` +
+      `<td class="num">${num(x.packets)}</td><td class="num">${num(x.satellites)}</td>` +
+      `<td class="num">${db1(x.avg_snr_db)}</td><td class="num">${db1(x.avg_noise_db)}</td></tr>`).join("");
+}
+
+async function loadHistory(days) {
+  historyDays = days || historyDays;
+  let resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if (historyVisible()) renderHistory(); }, 150);
+});
+
+document.querySelectorAll("[data-hdays]").forEach((b) => b.classList.toggle("active", Number(b.dataset.hdays) === historyDays));
+  try {
+    historyData = await (await fetch(`/api/history?days=${historyDays}`, { cache: "no-store" })).json();
+    historyData.series.forEach((x) => { x.other = x.observations - x.decoded; });
+    renderHistory();
+  } catch (_) {}
+}
+
+document.querySelectorAll("[data-hdays]").forEach((b) =>
+  b.addEventListener("click", () => loadHistory(Number(b.dataset.hdays))));
+
+function historyVisible() {
+  return !document.getElementById("page-history").classList.contains("hidden");
+}
+
 /* ---------- orbit / map ---------- */
 
 let orbitData = null;
@@ -625,6 +812,7 @@ function applyLang() {
   renderSignal();
   renderSatellite();
   if (orbitData) renderOrbit();
+  renderHistory();
 }
 
 function pad(n) { return String(n).padStart(2, "0"); }
@@ -689,9 +877,11 @@ document.querySelectorAll("[data-lang]").forEach((el) => el.addEventListener("cl
 
 document.querySelectorAll("[data-page]").forEach((el) => el.addEventListener("click", () => {
   document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b === el));
-  const overview = el.dataset.page === "overview";
-  document.getElementById("page-overview").classList.toggle("hidden", !overview);
-  document.getElementById("page-placeholder").classList.toggle("hidden", overview);
+  const page = el.dataset.page;
+  document.getElementById("page-overview").classList.toggle("hidden", page !== "overview");
+  document.getElementById("page-history").classList.toggle("hidden", page !== "history");
+  document.getElementById("page-placeholder").classList.toggle("hidden", ["overview", "history"].includes(page));
+  if (page === "history") loadHistory();
 }));
 
 document.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("click", () => {
@@ -716,6 +906,7 @@ loadOverview().then(loadOnline);
 setInterval(loadOverview, 30000);
 setInterval(loadOnline, 300000);
 setInterval(() => { if (mapVisible()) loadOrbit(); }, 30000);
+setInterval(() => { if (historyVisible()) loadHistory(); }, 300000);
 setInterval(() => { if (mapVisible()) { updateCountdowns(); renderPolar(); } }, 1000);
 setInterval(() => {
   if (journalVisible() && journalDay === utcToday()) loadJournalDays().then(() => loadJournal());
