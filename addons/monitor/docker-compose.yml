@@ -27,6 +27,7 @@ services:
         FASTAPI_REF: "master"
         UVICORN_REF: "main"
         PAHO_REF: "master"
+        SGP4_REF: "master"
     image: soniks-monitor:local
     container_name: monitor
     environment:
