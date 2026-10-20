@@ -17,3 +17,4 @@ sdrplay/package/arm64/*.so*
 sdrplay/package/arm64/sdrplay_apiService
 sdrplay/package/armhf/*.so*
 sdrplay/package/armhf/sdrplay_apiService
+sdrplay/package/
