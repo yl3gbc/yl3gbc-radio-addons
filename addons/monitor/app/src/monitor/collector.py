@@ -17,7 +17,7 @@ from pathlib import Path
 
 import paho.mqtt.client as paho
 
-from monitor import db
+from monitor import archive, db, offline
 from monitor.config import settings
 
 log = logging.getLogger("monitor")
@@ -129,6 +129,7 @@ def _read_observation(directory: Path) -> dict | None:
         "decoder": str(reception["decoder"]) if reception.get("decoder") is not None else None,
         "frequency_hz": int(reception["frequency_hz"])
         if isinstance(reception.get("frequency_hz"), int | float) else None,
+        "baud": int(reception["baud"]) if isinstance(reception.get("baud"), int | float) else None,
         "snr_db": signal.get("snr_db"),
         "noise_db": signal.get("noise_db"),
         "peak_db": signal.get("peak_db"),
@@ -138,6 +139,28 @@ def _read_observation(directory: Path) -> dict | None:
         "waterfall": waterfall,
         "images": images,
     }
+
+
+def _backfill_baud() -> None:
+    """Once at start: fill ``baud`` for observations stored before the column existed."""
+
+    rows = db.query("SELECT observation_id FROM observations WHERE baud IS NULL")
+    filled = 0
+    for r in rows:
+        directory = settings.complete_dir / r["observation_id"]
+        files = sorted(directory.glob("metadata_*.json")) if directory.is_dir() else []
+        if not files:
+            continue
+        try:
+            baud = (json.loads(files[-1].read_text(encoding="utf-8")).get("reception") or {}).get("baud")
+        except (OSError, ValueError):
+            continue
+        if isinstance(baud, int | float):
+            db.query("UPDATE observations SET baud = ? WHERE observation_id = ?",
+                     [int(baud), r["observation_id"]])
+            filled += 1
+    if filled:
+        log.info("baud filled for %d stored observations", filled)
 
 
 def _scan_complete() -> None:
@@ -178,6 +201,7 @@ def _scan_complete() -> None:
 def _cleanup() -> None:
     cutoff = datetime.now(UTC) - timedelta(days=settings.retention_days)
     db.delete_older_than(cutoff)
+    offline.cleanup(cutoff)
 
     if not settings.complete_dir.is_dir():
         return
@@ -204,7 +228,10 @@ def _loop(name: str, interval: int, func) -> None:
 
 
 def start() -> None:
+    archive.init()
     start_mqtt()
+    threading.Thread(target=_backfill_baud, name="backfill-baud", daemon=True).start()
     _loop("health", settings.health_interval, _poll_health)
     _loop("scan", settings.scan_interval, _scan_complete)
+    _loop("archive", settings.scan_interval, archive.run)
     _loop("cleanup", 3600, _cleanup)
