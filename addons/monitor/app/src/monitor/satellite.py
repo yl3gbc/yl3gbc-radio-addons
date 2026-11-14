@@ -6,7 +6,7 @@ Names come from the same source as the journal (portal first, satyaml for the re
 
 from datetime import datetime
 
-from monitor import db, journal
+from monitor import db, journal, modes
 
 LATEST = 50
 
@@ -100,5 +100,6 @@ def satellite(norad: int) -> dict:
             for d in days
         ],
         "best": obs(best[0]) if best else None,
+        "modes": modes.for_satellite(norad),
         "latest": [obs(r) for r in latest],
     }
