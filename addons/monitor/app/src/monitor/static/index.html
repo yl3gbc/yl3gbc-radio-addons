@@ -9,8 +9,8 @@
 <body>
   <header class="top">
     <div class="wrap top-row">
-      <div class="brand">
-        <span class="logo"></span>
+      <div class="brand" id="brand" style="cursor: pointer">
+        <img class="logo" src="/static/logo.ico" alt="SONIKS">
         <div>
           <div class="brand-sub" data-i18n="brand_sub"></div>
           <div class="brand-name">SONIKS Monitor</div>
@@ -18,9 +18,13 @@
       </div>
 
       <nav class="pills">
-        <button class="pill active" data-page="overview" data-i18n="nav_overview"></button>
-        <button class="pill" data-page="orbit" data-i18n="nav_orbit"></button>
+        <button class="pill active" data-page="overview" data-tab="station" data-i18n="tab_station"></button>
+        <button class="pill" data-page="overview" data-tab="satellite" data-i18n="tab_satellite"></button>
+        <button class="pill" data-page="overview" data-tab="map" data-i18n="tab_map"></button>
+        <button class="pill" data-page="overview" data-tab="journal" data-i18n="tab_journal"></button>
+        <button class="pill" data-page="overview" data-tab="signal" data-i18n="tab_signal"></button>
         <button class="pill" data-page="history" data-i18n="nav_history"></button>
+        <button class="pill" data-page="offline" data-i18n="nav_offline"></button>
         <button class="pill" data-page="guide" data-i18n="nav_guide"></button>
         <button class="pill" data-page="faq">FAQ</button>
       </nav>
@@ -36,19 +40,18 @@
         <div class="clock-label" data-i18n="utc_time"></div>
         <div class="clock-value" id="utc-time"></div>
       </div>
+      <div class="clock">
+        <div class="clock-label" data-i18n="local_date"></div>
+        <div class="clock-value" id="local-date"></div>
+        <div class="clock-label" data-i18n="local_time"></div>
+        <div class="clock-value" id="local-time"></div>
+        <div class="clock-tz" id="local-tz"></div>
+      </div>
     </div>
   </header>
 
   <main class="wrap content">
     <section id="page-overview" class="page">
-      <nav class="tabs">
-        <button class="pill active" data-tab="station" data-i18n="tab_station"></button>
-        <button class="pill" data-tab="satellite" data-i18n="tab_satellite"></button>
-        <button class="pill" data-tab="journal" data-i18n="tab_journal"></button>
-        <button class="pill" data-tab="map" data-i18n="tab_map"></button>
-        <button class="pill" data-tab="signal" data-i18n="tab_signal"></button>
-      </nav>
-
       <div id="tab-station" class="tab">
         <div class="grid3" id="own-station"></div>
 
@@ -71,6 +74,10 @@
           <select id="sat-select" class="wide-select"></select>
         </div>
         <div class="grid4" id="sat-summary"></div>
+        <div class="panel">
+          <div class="panel-title"><span data-i18n="md_sat_title"></span> <button class="pill md-more" id="sat-modes-more" type="button" data-i18n="md_more"></button></div>
+          <div class="table-wrap"><table class="tbl" id="sat-modes"></table></div>
+        </div>
         <div class="sat-top">
           <div class="panel sat-best">
             <div class="panel-title" data-i18n="sat_best"></div>
@@ -127,6 +134,10 @@
       </div>
 
       <div id="tab-signal" class="tab hidden">
+        <div class="panel">
+          <div class="panel-title"><span data-i18n="md_title"></span> <span class="md-period" id="md-period"></span></div>
+          <div class="table-wrap"><table class="tbl" id="md-table"></table></div>
+        </div>
         <div class="journal-bar">
           <button class="pill" id="s-prev" type="button">◀</button>
           <select id="s-day"></select>
@@ -137,6 +148,18 @@
         </div>
         <div class="wf-count" id="s-count"></div>
         <div class="wf-grid" id="s-grid"></div>
+      </div>
+
+      <div id="tab-images" class="tab hidden">
+        <div class="panel">
+          <div class="panel-title" data-i18n="a_archives"></div>
+          <div class="arch-list" id="a-archives"></div>
+        </div>
+        <div class="wf-count" id="a-count"></div>
+        <div class="wf-grid" id="a-grid"></div>
+        <div class="journal-bar a-more-bar">
+          <button class="pill hidden" id="a-more" type="button" data-i18n="a_more"></button>
+        </div>
       </div>
 
       <div id="tab-placeholder" class="tab hidden">
@@ -187,10 +210,64 @@
       <div class="chart-tip hidden" id="h-tip"></div>
     </section>
 
+    <section id="page-offline" class="page hidden">
+      <div class="note" data-i18n="o_note"></div>
+      <div class="note warn hidden" id="o-worker" data-i18n="o_worker_off"></div>
+
+      <div class="o-forms">
+        <form class="panel o-form" id="o-upload">
+          <div class="panel-title" data-i18n="o_upload"></div>
+          <label class="fld"><span data-i18n="o_file"></span>
+            <input type="file" id="o-file" accept=".ogg,.oga,.wav,audio/ogg,audio/wav" required></label>
+          <label class="fld"><span data-i18n="o_sat"></span>
+            <input id="o-sat" list="o-sats" autocomplete="off"></label>
+          <div class="fld-row">
+            <label class="fld"><span data-i18n="o_obs"></span>
+              <input id="o-obs" inputmode="numeric" autocomplete="off"></label>
+            <label class="fld"><span data-i18n="o_elev"></span>
+              <input id="o-elev" inputmode="decimal" autocomplete="off"></label>
+          </div>
+          <label class="check"><input type="checkbox" id="o-iq"> <span data-i18n="o_iq"></span></label>
+          <div class="fld-row end">
+            <span class="o-msg" id="o-upload-msg"></span>
+            <button class="pill active" type="submit" data-i18n="o_start"></button>
+          </div>
+        </form>
+
+        <form class="panel o-form" id="o-from">
+          <div class="panel-title" data-i18n="o_from"></div>
+          <label class="fld"><span data-i18n="o_obs_own"></span>
+            <input id="o-from-obs" inputmode="numeric" autocomplete="off" required></label>
+          <label class="fld"><span data-i18n="o_sat"></span>
+            <input id="o-from-sat" list="o-sats" autocomplete="off"></label>
+          <div class="fld-row end">
+            <span class="o-msg" id="o-from-msg"></span>
+            <button class="pill active" type="submit" data-i18n="o_start"></button>
+          </div>
+        </form>
+      </div>
+      <datalist id="o-sats"></datalist>
+
+      <div class="panel">
+        <div class="panel-title" data-i18n="o_tests"></div>
+        <div class="table-wrap"><table class="tbl" id="o-tests"></table></div>
+      </div>
+
+      <div class="panel hidden" id="o-detail"></div>
+    </section>
+
+    <section id="page-guide" class="page hidden guide"></section>
+
+    <section id="page-faq" class="page hidden guide"></section>
+
     <section id="page-placeholder" class="page hidden">
       <div class="card wide"><div class="card-label" data-i18n="soon"></div></div>
     </section>
   </main>
+  <footer class="page-foot">
+    <span data-i18n="f_author"></span> YL3GBC Arnis Armans
+    · <span data-i18n="f_version"></span> 0.1alfa
+  </footer>
 
   <script src="/static/app.js"></script>
 </body>
