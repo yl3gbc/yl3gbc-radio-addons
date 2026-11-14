@@ -1,6 +1,12 @@
 # Установка SONIKS Monitor: на работающую станцию или с клиентом СОНИКС из исходников
 
-> **Альфа-версия 0.0.0** — для пробы и тестирования.
+> **Альфа-версия 0.1alfa** — для пробы и тестирования. Автор: YL3GBC Arnis Armans.
+>
+> **Платформа:** amd64 (x86_64) — собрано и проверено. arm64 (Raspberry Pi, Orange Pi) — пока
+> не проверялось.
+>
+> **Код клиента SONIKS не изменён** — он принадлежит команде SONIKS, монитор только читает
+> данные станции.
 
 Пошаговая инструкция в двух вариантах:
 
@@ -15,6 +21,15 @@
 Если станция СОНИКС уже работает (официальный образ клиента, установка по инструкции СОНИКС),
 клиента пересобирать не нужно — достаточно добавить монитор. Ниже `<папка станции>` — папка,
 где лежат `docker-compose.yml` и `.env` вашей станции.
+
+Логи станции смотрите только командой из описания SONIKS:
+
+```
+cd <папка станции>
+sudo docker-compose logs -f
+```
+
+(выход — Ctrl+C).
 
 Нужны Docker Compose **2.17 или новее** и около 10 ГБ места. Монитор собирается из исходников:
 на amd64 первый раз 30–60 минут, на Raspberry Pi (arm64) — несколько часов.
@@ -54,13 +69,21 @@ mkdir -p data
 
 (или ссылка `data` на второй диск — см. шаг 5).
 
-Добавьте в `.env` станции:
+Добавьте в `.env` станции четыре строки. Что они значат и как их придумать — в файле
+`addons/monitor/env.example`:
 
 ```
 INFLUX_USER=...
 INFLUX_PASSWORD=...
 INFLUX_TOKEN=...
 GRAFANA_PASSWORD=...
+```
+
+Папки для данных:
+
+```
+cd <папка станции>
+mkdir -p data/complete data/monitor data/offline data/images data/influxdb
 ```
 
 ### 0.4. Сборка и запуск
@@ -73,7 +96,8 @@ docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d
 
 `up -d` с файлом монитора пересоздаёт контейнер клиента: в нём включается сохранение
 наблюдений в `./data/complete`. Клиент перезапускается за несколько секунд; не делайте этого
-во время наблюдения (ближайшее — в `docker logs soniks-client`).
+во время наблюдения (ближайшее видно в «Будущие задания» на портале и в логе
+`sudo docker-compose logs -f`).
 
 ### 0.5. Проверка
 
@@ -81,8 +105,8 @@ docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d
 
 ### 0.6. Агент
 
-`soniks-agent` обновляет клиента по команде портала. Если после такого обновления
-`docker exec soniks-client printenv OBSERVATION__REMOVE_OBSERVATION_DATA` показывает не `False`,
+`soniks-agent` обновляет клиента по команде портала. Если после такого обновления в мониторе
+перестали появляться новые наблюдения («Сегодня» не растёт, в «Дневном журнале» нет новых),
 клиент был пересоздан без файла монитора — запустите шаг 0.4 (`up -d`) ещё раз.
 
 Остальные разделы ниже — полная установка с клиентом, собранным из исходников.
@@ -90,7 +114,7 @@ docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d
 ## 1. Что нужно
 
 - Компьютер **amd64** с Linux, Docker и Docker Compose **2.17 или новее** (нужен `additional_contexts`).
-- Приёмник (проверено на Airspy Mini).
+- Приёмник (проверено на Airspy Mini и Airspy R2).
 - Зарегистрированная станция на портале sonik.space (номер станции и токен).
 - Место на диске: около 25 ГБ под образы и кеш сборки, плюс место под наблюдения (рекомендуется второй диск).
 - Время: клиент с базой собирается примерно 10–20 минут, монитор в первый раз — 30–60 минут
@@ -128,7 +152,7 @@ git log --oneline -1
 git describe --tags
 ```
 
-`git describe --tags` показывает версию (например `3.0.2`) — она нужна при сборке.
+`git describe --tags` показывает версию (например `3.1.0`) — она нужна при сборке.
 
 ### 3.2. Сборка с нуля
 
@@ -137,23 +161,21 @@ git describe --tags
 
 ```
 cd ~/soniks-client-new/soniks-client
-BASE_IMAGE=soniks-base:local IMAGE=satnogs-soniks-client PLATFORMS=linux/amd64 ./build.sh 3.0.2 --base -- --no-cache --build-arg PARALLEL_JOBS=5 2>&1 | tee ~/client-build.log
+BASE_IMAGE=soniks-base:local IMAGE=satnogs-soniks-client PLATFORMS=linux/amd64 ./build.sh 3.1.0 --base -- --no-cache --build-arg PARALLEL_JOBS=5 2>&1 | tee ~/client-build.log
 ```
 
-Вместо `3.0.2` — версия из `git describe --tags`.
+Вместо `3.1.0` — версия из `git describe --tags`.
 
 Проверка:
 
 ```
 cd ~/soniks-client-new
-docker inspect satnogs-soniks-client:3.0.2 --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
 grep -c "CACHED" ~/client-build.log
-docker images | grep -i soniks
+docker images
 ```
 
-- первая строка — коммит клиента (совпадает с `git log --oneline -1`);
 - `CACHED` — `0`, то есть всё собрано с нуля;
-- в списке есть `soniks-base:local` и `satnogs-soniks-client:3.0.2`.
+- в списке есть `soniks-base:local` и `satnogs-soniks-client:3.1.0`.
 
 ### 3.3. docker-compose.yml и .env станции
 
@@ -161,10 +183,18 @@ docker images | grep -i soniks
 В `docker-compose.yml` у сервиса `soniks-client` образ меняется на собранный локально:
 
 ```
-    image: satnogs-soniks-client:3.0.2
+    image: satnogs-soniks-client:3.1.0
 ```
 
-В `.env` должны быть `STATION__ID` и `URL__BASE`, а для монитора ещё:
+С версии 3.0.3 USB приёмника подключается через `volumes`, а не через `devices`:
+
+```
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+```
+
+В `.env` должны быть `STATION__ID` и `URL__BASE`, а для монитора ещё (подробно — в
+`addons/monitor/env.example`):
 
 ```
 INFLUX_USER=...
@@ -202,6 +232,7 @@ cp -r ~/yl3gbc-db_dev/libs/db_dev2.1.0 ~/soniks-client-new/libs/
 ## 5. Папка данных
 
 Наблюдения (с изображениями и водопадом), база монитора и InfluxDB хранятся 90 дней в `./data`.
+Архив изображений (`./data/images`) и его ZIP хранятся бессрочно.
 
 Просто папка:
 
@@ -210,13 +241,20 @@ cd ~/soniks-client-new
 mkdir -p data
 ```
 
-Или на втором диске (пример: диск смонтирован в `/mnt/sdb2`):
+Или на втором диске (рекомендуется, но не обязательно) (пример: диск смонтирован в `/mnt/sdb2`):
 
 ```
 sudo mkdir -p /mnt/sdb2/soniks-client-new
 sudo chown $USER: /mnt/sdb2/soniks-client-new
 cd ~/soniks-client-new
 ln -s /mnt/sdb2/soniks-client-new data
+```
+
+Затем папки внутри `data`:
+
+```
+cd ~/soniks-client-new
+mkdir -p data/complete data/monitor data/offline data/images data/influxdb
 ```
 
 Если данные на втором диске — диск должен монтироваться при загрузке (`/etc/fstab`)
@@ -248,20 +286,16 @@ docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml stop s
 
 ```
 cd ~/soniks-client-new
-docker ps --format "{{.Names}}  {{.Status}}  {{.Ports}}"
-docker logs soniks-client --tail 30
-docker logs monitor --tail 20
-docker exec soniks-client printenv OBSERVATION__REMOVE_OBSERVATION_DATA
-curl -s http://127.0.0.1:8090/api/overview | head -c 400
+docker ps
+sudo docker-compose logs -f
 ```
 
-Должно быть:
+(выход из лога — Ctrl+C). Должно быть:
 
-- `soniks-client` — `Up … (healthy)`; в журнале «MQTT: подключено», «получен снимок расписания»,
+- `soniks-client` — `Up … (healthy)`; в логе «MQTT: подключено», «получен снимок расписания»,
   «Найдено приёмников: 1»;
-- `monitor` — `Up`, в журнале `SONIKS Monitor: station <номер>, port 8090`;
-- `OBSERVATION__REMOVE_OBSERVATION_DATA` — `False`;
-- `/api/overview` отдаёт JSON со станцией.
+- `monitor` — `Up`;
+- в мониторе на «Станции» — карточка вашей станции и версия клиента.
 
 Откройте:
 
@@ -271,22 +305,21 @@ curl -s http://127.0.0.1:8090/api/overview | head -c 400
 После первого завершённого наблюдения (монитор просматривает `data/complete` раз в минуту)
 оно появится в «Дневном журнале».
 
-Проверка наблюдения в журнале клиента:
-
-```
-cd ~/soniks-client-new
-docker logs soniks-client --since 30m 2>&1 | grep -i "Старт наблюдения\|ValueError\|код возврата\|Водопад"
-```
-
-Должно быть «Водопад построен», без `ValueError`.
+В логе после наблюдения должно быть «Водопад построен» и «Директория перемещена … в
+…/data/complete/…», без `ValueError`.
 
 Предупреждения монитора `healthz: … name resolution` / `Connection refused` во время
 пересборки или перезапуска клиента — нормальны и проходят сами.
 
 ## 8. Обновление клиента после нового коммита
 
-Каждый новый коммит СОНИКС — полная пересборка с нуля. Старый образ, база и кеш
-удаляются **до** `git pull`.
+Каждый новый коммит СОНИКС — полная пересборка с нуля. Порядок обязателен:
+
+1. удалить старый образ, базу и кеш;
+2. **`sudo reboot`** — с версии 3.1 обязательно, иначе после сборки клиент не видит SDR
+   («Найдено приёмников: 0»);
+3. `git pull` с подмодулями;
+4. сборка с нуля и запуск.
 
 ### 8.1. Есть ли новый коммит
 
@@ -303,7 +336,7 @@ git --no-pager show --stat origin/soniks
 cd ~/soniks-client-new
 docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml stop soniks-client
 docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml rm -f soniks-client
-docker image rm -f satnogs-soniks-client:3.0.2
+docker image rm -f satnogs-soniks-client:3.1.0
 docker image rm -f soniks-base:local
 docker builder prune -af
 docker images | grep -i soniks
@@ -312,6 +345,12 @@ docker images | grep -i soniks
 В списке остаётся только `soniks-monitor:local`.
 `docker builder prune -af` удаляет и кеш сборки монитора — следующая сборка монитора снова будет долгой.
 Не запускайте этот шаг, пока идёт сборка монитора.
+
+Затем перезагрузка (обязательно):
+
+```
+sudo reboot
+```
 
 ### 8.3. Новый коммит
 
@@ -326,16 +365,17 @@ git log --oneline -1
 
 ```
 cd ~/soniks-client-new/soniks-client
-BASE_IMAGE=soniks-base:local IMAGE=satnogs-soniks-client PLATFORMS=linux/amd64 ./build.sh 3.0.2 --base -- --no-cache --build-arg PARALLEL_JOBS=5 2>&1 | tee ~/client-build.log
+BASE_IMAGE=soniks-base:local IMAGE=satnogs-soniks-client PLATFORMS=linux/amd64 ./build.sh 3.1.0 --base -- --no-cache --build-arg PARALLEL_JOBS=5 2>&1 | tee ~/client-build.log
 cd ~/soniks-client-new
-docker inspect satnogs-soniks-client:3.0.2 --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
 grep -c "CACHED" ~/client-build.log
 docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d soniks-client
-docker logs soniks-client --tail 30
+sudo docker-compose logs -f
 ```
 
+В логе должно быть «Найдено приёмников: 1».
+
 Если сборка упала с ошибкой — снова шаг 8.2 (всё удалить) и сборка с нуля.
-Если сменилась версия (тег) — замените `3.0.2` в командах и в `docker-compose.yml`.
+Если сменилась версия (тег) — замените `3.1.0` в командах и в `docker-compose.yml`.
 
 ## 9. Обновление монитора
 
@@ -351,7 +391,7 @@ docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml build 
 docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d monitor
 ```
 
-После обновления страницу монитора открывайте с Ctrl+Shift+R, чтобы браузер не взял старый `app.js`.
+После обновления страницу монитора обновите Ctrl+F5.
 
 ## 10. Известные проблемы Airspy
 
@@ -360,9 +400,13 @@ docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d 
 - **Подавление постоянной составляющей (DC removal) — «Нет».** Airspy его не поддерживает; с «Да»
   граф падал: `ValueError: Channel 0 does not support automatic DC removal setting`.
   С клиента `dc56686` такая настройка с портала отклоняется проверкой приёмника.
-- **«Другие настройки» без пустых значений.** Шаблон `LIN=,LNA=,MIX=,VGA=,SENS=` ронял граф
-  (`ValueError: stod`). Указывайте один профиль с числом, например `LIN=16`
-  (LIN или SENS, 0–21, не смешивать). С клиента `dc56686` пустые пары выбрасываются.
+- **Усиление — через «Режим усиления» и «Усиление», не через «Другие настройки».**
+  С версии 3.1 `LIN=`, `LNA=`, `MIX=`, `VGA=` в «Других настройках» (`FLOWGRAPH__OTHER_SETTINGS`)
+  до приёмника не доходят — клиент пишет предупреждение
+  «FLOWGRAPH_OTHER_SETTINGS задаёт усиление (LIN)…». Задавайте `FLOWGRAPH__GAIN_MODE=Overall`
+  и `FLOWGRAPH__RF_GAIN` (0–21). В «Других настройках» — только настройки драйвера,
+  например `biastee=true`. Пустые пары (`LIN=,LNA=`) клиент выбрасывает.
+- **После пересборки клиента — `sudo reboot`** (шаг 8.2), иначе SDR не виден.
 
 Новые настройки с портала клиент применяет после текущего прохода
 («Конфигурация … получена, применится после прохода»).
