@@ -1,16 +1,17 @@
 """FastAPI app on :8090 — page, JSON API and observation files."""
 
+import hashlib
 import os
 import shutil
 from datetime import UTC, date, datetime
 from importlib import resources
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from monitor import collector, db, history, journal, orbit, portal, satellite
+from monitor import archive, collector, db, history, journal, modes, offline, orbit, portal, satellite
 from monitor.config import settings
 
 STATIC = Path(str(resources.files("monitor") / "static"))
@@ -51,14 +52,34 @@ def _today() -> dict:
 
 
 app = FastAPI(title="SONIKS Monitor", docs_url=None, redoc_url=None)
-app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+
+class _Static(StaticFiles):
+    """Static files that the browser must revalidate (ETag) before every use."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/static", _Static(directory=STATIC), name="static")
 
 NO_STORE = {"Cache-Control": "no-store"}
 
 
+def _version(name: str) -> str:
+    return hashlib.sha256((STATIC / name).read_bytes()).hexdigest()[:12]
+
+
 @app.get("/")
 def index():
-    return FileResponse(STATIC / "index.html")
+    """index.html with ?v=<content hash> on app.js / app.css: a new build is always fetched fresh."""
+
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    for name in ("app.js", "app.css"):
+        html = html.replace(f"/static/{name}\"", f"/static/{name}?v={_version(name)}\"")
+    return HTMLResponse(html, headers=NO_STORE)
 
 
 def _station_card(station_id: int) -> dict | None:
@@ -70,7 +91,7 @@ def _station_card(station_id: int) -> dict | None:
 
 @app.get("/api/overview")
 def overview():
-    archive = settings.complete_dir.is_dir() and os.access(settings.complete_dir, os.R_OK)
+    archive_ok = settings.images_dir.is_dir() and os.access(settings.images_dir, os.W_OK)
     return JSONResponse({
         "station_id": settings.station_id,
         "station": _station_card(settings.station_id) or {},
@@ -80,7 +101,8 @@ def overview():
         "satyaml": _satyaml_count(),
         "ram_percent": _ram_percent(),
         "disk_percent": _disk_percent("/"),
-        "archive_connected": archive,
+        "archive_connected": archive_ok,
+        "archive_images": archive.count(),
     }, headers=NO_STORE)
 
 
@@ -134,9 +156,78 @@ def satellite_detail(norad: int):
     return JSONResponse(satellite.satellite(norad), headers=NO_STORE)
 
 
+@app.get("/api/modes")
+def modes_view(days: int = 90):
+    return JSONResponse(modes.modes(days), headers=NO_STORE)
+
+
 @app.get("/api/history")
 def history_view(days: int = 30):
     return JSONResponse(history.history(days), headers=NO_STORE)
+
+
+@app.get("/api/offline")
+def offline_list():
+    return JSONResponse({"worker": offline.worker_state(), "tests": offline.tests(),
+                         "low_elevation": settings.offline_low_elevation,
+                         "retention_days": settings.retention_days}, headers=NO_STORE)
+
+
+@app.get("/api/offline/satellites")
+def offline_satellites():
+    return JSONResponse(offline.satellites(), headers=NO_STORE)
+
+
+@app.post("/api/offline/upload")
+async def offline_upload(request: Request, filename: str, satellite: str = "",
+                         observation: str = "", elevation: str = "", iq: bool = False):
+    try:
+        return JSONResponse(await offline.upload(request.stream(), filename, satellite.strip(),
+                                                 observation.strip(), elevation.strip(), iq))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/offline/from/{observation_id}")
+def offline_from_observation(observation_id: str, satellite: str = ""):
+    try:
+        return JSONResponse(offline.from_observation(observation_id, satellite.strip()))
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/offline/{test_id}")
+def offline_test(test_id: str):
+    try:
+        return JSONResponse(offline.test(test_id), headers=NO_STORE)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404)
+
+
+@app.post("/api/offline/{test_id}/rerun")
+def offline_rerun(test_id: str, satellite: str = "auto", iq: bool = False):
+    try:
+        return JSONResponse(offline.rerun(test_id, satellite.strip() or "auto", iq))
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.delete("/api/offline/{test_id}")
+def offline_delete(test_id: str):
+    try:
+        offline.delete(test_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404)
+    return JSONResponse({"deleted": test_id})
+
+
+@app.get("/api/offline/{test_id}/run/{run}/kiss")
+def offline_kiss(test_id: str, run: int):
+    try:
+        path = offline.kiss_path(test_id, run)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404)
+    return FileResponse(path, filename=f"{test_id}_run{run}.kiss", media_type="application/octet-stream")
 
 
 @app.get("/api/orbit")
@@ -157,4 +248,26 @@ def observation_file(observation_id: str, name: str):
     target = (base / observation_id / name).resolve()
     if base not in target.parents or not target.is_file():
         raise HTTPException(status_code=404)
+    return FileResponse(target)
+
+
+@app.get("/api/images")
+def images_list(limit: int = 60, offset: int = 0):
+    return JSONResponse(archive.listing(max(1, min(limit, 500)), max(0, offset),
+                                        journal.satellite_names()), headers=NO_STORE)
+
+
+@app.get("/api/images/archives")
+def images_archives():
+    return JSONResponse(archive.archives(), headers=NO_STORE)
+
+
+@app.get("/images/{path:path}")
+def image_file(path: str):
+    base = settings.images_dir.resolve()
+    target = (base / path).resolve()
+    if base not in target.parents or not target.is_file() or target.name.endswith(".part"):
+        raise HTTPException(status_code=404)
+    if target.suffix == ".zip":
+        return FileResponse(target, filename=target.name, media_type="application/zip")
     return FileResponse(target)
