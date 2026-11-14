@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS observations (
     mode           VARCHAR,
     decoder        VARCHAR,
     frequency_hz   BIGINT,
+    baud           INTEGER,
     snr_db         DOUBLE,
     noise_db       DOUBLE,
     peak_db        DOUBLE,
@@ -36,6 +37,8 @@ def connect() -> None:
     settings.db_path.parent.mkdir(parents=True, exist_ok=True)
     _conn = db_dev.connect(str(settings.db_path))
     _conn.execute(SCHEMA)
+    # databases created before the baud column existed
+    _conn.execute("ALTER TABLE observations ADD COLUMN IF NOT EXISTS baud INTEGER")
 
 
 def query(sql: str, params: list | None = None) -> list[dict]:
