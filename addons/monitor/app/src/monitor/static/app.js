@@ -4,7 +4,7 @@ const I18N = {
   ru: {
     brand_sub: "SONIKS / Наземная станция",
     nav_overview: "Обзор", nav_orbit: "Орбита", nav_history: "История", nav_guide: "Руководство",
-    utc_date: "Дата UTC", utc_time: "Время UTC",
+    utc_date: "Дата UTC", utc_time: "Время UTC", local_date: "Местная дата", local_time: "Местное время",
     tab_station: "Станция", tab_satellite: "Спутник", tab_journal: "Дневной журнал",
     tab_map: "Орбита / Карта", tab_signal: "Сигнал / Waterfall",
     station: "Станция", client: "Клиент", qth: "QTH", observations_total: "Наблюдения всего",
@@ -13,6 +13,9 @@ const I18N = {
     compared_station: "Сравниваемая станция", coordinates: "Координаты",
     satyaml: "Описания satyaml", ram: "Оперативная память", disk: "Диск станции",
     archive: "Архив изображений", connected: "Подключено", not_connected: "Не подключено",
+    a_images: "снимков", a_archives: "Архивы ZIP — по 2 месяца (UTC)", a_no_archives: "Архивов пока нет — ZIP создаётся после окончания периода",
+    a_more: "Показать ещё", a_empty: "Изображений пока нет", a_shown: "Снимков", a_of: "из", a_download: "Скачать", a_broken: "Изображение неполное", f_author: "Автор", f_version: "Версия",
+    a_baud: "Бод", k_sstv: "SSTV", k_ssdv: "SSDV", k_lrpt: "LRPT", k_packet: "Пакетное изображение",
     not_found: "Станция не найдена", soon: "Раздел в разработке",
     online_pick: "Станции в сети…",
     j_today: "Сегодня", j_per_sat: "По спутникам — средние за день", j_observations: "Наблюдения за день",
@@ -23,6 +26,10 @@ const I18N = {
     j_waterfall: "Водопад", j_count: "Набл.", j_empty: "За этот день наблюдений нет",
     s_all_sats: "Все спутники", s_decoded_only: "Только декодированные",
     s_shown: "Водопадов", s_empty: "Нет водопадов по этому выбору",
+    md_title: "По режимам — с какого SNR декодируется", md_last: "последние", md_days: "дн.",
+    md_mode: "Режим", md_baud: "Бод", md_passes: "Проходы", md_min: "Мин. SNR с данными, дБ",
+    md_avg_ok: "SNR декод., дБ", md_avg_fail: "SNR без данных, дБ", md_band: "SNR",
+    md_empty: "Пока нет данных", md_sat_title: "Режим спутника — порог по всем спутникам", md_more: "все режимы →",
     sat_best: "Лучший приём", sat_days: "По дням", sat_latest: "Последние наблюдения",
     sat_obs_total: "Наблюдения всего", sat_best_snr: "Лучший SNR, дБ", sat_last: "Последнее наблюдение",
     sat_first: "первое", sat_date: "Дата", sat_none: "Наблюдений этого спутника пока нет",
@@ -33,11 +40,25 @@ const I18N = {
     h_packets_chart: "Пакеты по дням", h_sats_chart: "Спутники по дням", h_snr_chart: "Средний SNR по дням, дБ",
     h_noise_chart: "Средний шум по дням, дБ", h_table: "Таблица по дням", h_active: "Активных дней",
     h_best: "Лучший день", h_sats: "Спутников",
+    nav_offline: "Офлайн-тест",
+    o_note: "Офлайн-тест декодирует записанный пролёт (.ogg) без станции. Декодер работает без сети: результаты остаются только здесь и никуда не отправляются.",
+    o_worker_off: "Офлайн-декодер (дополнение offline) не запущен — тесты встанут в очередь и начнутся, когда он заработает.",
+    o_upload: "Загрузить запись", o_file: "Файл (.ogg, .wav)", o_sat: "Спутник (NORAD) — пусто = автоподбор",
+    o_obs: "ID наблюдения (необязательно)", o_elev: "Макс. угол, ° (если нет ID)", o_iq: "Запись IQ (2 канала)",
+    o_start: "Запустить", o_from: "Из моего наблюдения", o_obs_own: "ID наблюдения станции",
+    o_tests: "Тесты", o_created: "Создан UTC", o_source: "Источник", o_file_col: "Файл", o_angle: "Макс. угол",
+    o_state: "Статус", o_result: "Результат", o_best: "Лучший декодер", o_frames: "Кадров",
+    st_queued: "в очереди", st_running: "идёт", st_done: "декодировано", st_fail: "не декодировано", st_error: "ошибка",
+    o_auto: "автоподбор", o_given: "задан", o_rerun: "Повторить", o_delete: "Удалить", o_kiss: "Скачать KISS",
+    o_ranking: "Кандидаты", o_hex: "Кадры (HEX)", o_log: "Журнал gr_satellites", o_runs: "Попытки",
+    o_tried: "проверено", o_rec: "Запись", o_uploading: "Загрузка…", o_queued_msg: "Тест поставлен в очередь",
+    o_keep: "Оригинал хранится, пока запись не декодирована", o_low: "низкий пролёт — можно удалить",
+    o_src_upload: "загрузка", o_src_station: "станция", o_line: "линия", o_noline: "сигнал не найден — проверяются все описания", o_confirm: "Удалить тест и файл?", o_none: "Тестов пока нет",
   },
   en: {
     brand_sub: "SONIKS / Ground station",
     nav_overview: "Overview", nav_orbit: "Orbit", nav_history: "History", nav_guide: "Guide",
-    utc_date: "UTC date", utc_time: "UTC time",
+    utc_date: "UTC date", utc_time: "UTC time", local_date: "Local date", local_time: "Local time",
     tab_station: "Station", tab_satellite: "Satellite", tab_journal: "Daily journal",
     tab_map: "Orbit / Map", tab_signal: "Signal / Waterfall",
     station: "Station", client: "Client", qth: "QTH", observations_total: "Observations total",
@@ -46,6 +67,9 @@ const I18N = {
     compared_station: "Compared station", coordinates: "Coordinates",
     satyaml: "Satyaml descriptions", ram: "Memory", disk: "Station disk",
     archive: "Image archive", connected: "Connected", not_connected: "Not connected",
+    a_images: "images", a_archives: "ZIP archives — 2 months each (UTC)", a_no_archives: "No archives yet — a ZIP is made after the period ends",
+    a_more: "Show more", a_empty: "No images yet", a_shown: "Images", a_of: "of", a_download: "Download", a_broken: "Incomplete image", f_author: "Author", f_version: "Version",
+    a_baud: "Bd", k_sstv: "SSTV", k_ssdv: "SSDV", k_lrpt: "LRPT", k_packet: "Packet image",
     not_found: "Station not found", soon: "Section in development",
     online_pick: "Online stations…",
     j_today: "Today", j_per_sat: "Per satellite — daily averages", j_observations: "Observations of the day",
@@ -56,6 +80,10 @@ const I18N = {
     j_waterfall: "Waterfall", j_count: "Obs.", j_empty: "No observations on this day",
     s_all_sats: "All satellites", s_decoded_only: "Decoded only",
     s_shown: "Waterfalls", s_empty: "No waterfalls for this selection",
+    md_title: "By mode — from which SNR it decodes", md_last: "last", md_days: "days",
+    md_mode: "Mode", md_baud: "Baud", md_passes: "Passes", md_min: "Min SNR with data, dB",
+    md_avg_ok: "SNR decoded, dB", md_avg_fail: "SNR no data, dB", md_band: "SNR",
+    md_empty: "No data yet", md_sat_title: "Satellite's mode — threshold over all satellites", md_more: "all modes →",
     sat_best: "Best reception", sat_days: "Per day", sat_latest: "Latest observations",
     sat_obs_total: "Observations total", sat_best_snr: "Best SNR, dB", sat_last: "Last observation",
     sat_first: "first", sat_date: "Date", sat_none: "No observations of this satellite yet",
@@ -66,6 +94,20 @@ const I18N = {
     h_packets_chart: "Packets per day", h_sats_chart: "Satellites per day", h_snr_chart: "Average SNR per day, dB",
     h_noise_chart: "Average noise per day, dB", h_table: "Table per day", h_active: "Active days",
     h_best: "Best day", h_sats: "Satellites",
+    nav_offline: "Offline test",
+    o_note: "The offline test decodes a recorded pass (.ogg) without the station. The decoder has no network: results stay here only and are never sent anywhere.",
+    o_worker_off: "The offline decoder (offline addon) is not running — tests are queued and start once it runs.",
+    o_upload: "Upload a recording", o_file: "File (.ogg, .wav)", o_sat: "Satellite (NORAD) — empty = auto",
+    o_obs: "Observation ID (optional)", o_elev: "Max elevation, ° (if no ID)", o_iq: "IQ recording (2 channels)",
+    o_start: "Start", o_from: "From my observation", o_obs_own: "Station observation ID",
+    o_tests: "Tests", o_created: "Created UTC", o_source: "Source", o_file_col: "File", o_angle: "Max elevation",
+    o_state: "Status", o_result: "Result", o_best: "Best decoder", o_frames: "Frames",
+    st_queued: "queued", st_running: "running", st_done: "decoded", st_fail: "not decoded", st_error: "error",
+    o_auto: "auto", o_given: "given", o_rerun: "Run again", o_delete: "Delete", o_kiss: "Download KISS",
+    o_ranking: "Candidates", o_hex: "Frames (HEX)", o_log: "gr_satellites log", o_runs: "Attempts",
+    o_tried: "tried", o_rec: "Recording", o_uploading: "Uploading…", o_queued_msg: "Test queued",
+    o_keep: "The original is kept until the recording decodes", o_low: "low pass — may be deleted",
+    o_src_upload: "upload", o_src_station: "station", o_line: "line", o_noline: "no signal found — trying every description", o_confirm: "Delete the test and its file?", o_none: "No tests yet",
   },
 };
 
@@ -136,7 +178,10 @@ function renderOverview() {
     card(t("satyaml"), num(o.satyaml)) +
     barCard(t("ram"), o.ram_percent) +
     barCard(t("disk"), o.disk_percent) +
-    card(t("archive"), esc(o.archive_connected ? t("connected") : t("not_connected")).toUpperCase());
+    `<div class="card card-link" id="archive-card" role="button" tabindex="0">` +
+    `<div class="card-label">${esc(t("archive"))}</div>` +
+    `<div class="card-value">${num(o.archive_images)} <span class="sub">${t("a_images")}</span></div>` +
+    `<div class="card-sub">${esc(o.archive_connected ? t("connected") : t("not_connected"))}</div></div>`;
 }
 
 function renderCompare() {
@@ -302,6 +347,72 @@ function wfCard(o, withDate = false) {
     `</div></div></div>`;
 }
 
+/* ---------- image archive ---------- */
+
+const ARCHIVE_PAGE = 60;
+let archiveItems = [];
+let archiveTotal = 0;
+let archiveZips = [];
+
+const fmtSize = (b) => (b === null || b === undefined ? "—" : b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+const utcText = (iso) => (iso ? `${iso.slice(0, 10)} ${iso.slice(11, 19)}` : "—");
+
+function imageCard(o) {
+  const baud = o.baud ? ` · ${num(o.baud)} ${t("a_baud")}` : "";
+  return `<div class="wf-card">` +
+    `<a href="${esc(o.url)}" target="_blank"><img class="img-big" loading="lazy" src="${esc(o.url)}" alt=""></a>` +
+    `<div class="wf-meta">` +
+    `<div class="img-kind">${esc(t(`k_${o.kind}`))}</div>` +
+    `<div class="wf-title">${esc(o.satellite || `NORAD ${o.norad ?? "—"}`)}<span class="sub">${esc(o.norad)}</span></div>` +
+    `<div class="wf-line">#${esc(o.observation_id)}</div>` +
+    `<div class="wf-line">${utcText(o.started_at)} – ${hms(o.stopped_at)} UTC</div>` +
+    `<div class="wf-line">${esc(o.mode)}${baud}</div>` +
+    `</div></div>`;
+}
+
+document.getElementById("a-grid").addEventListener("error", (e) => {
+  if (e.target.tagName !== "IMG") return;
+  const d = document.createElement("div");
+  d.className = "img-big img-bad";
+  d.textContent = t("a_broken");
+  (e.target.closest("a") || e.target).replaceWith(d);
+}, true);
+
+function renderArchive() {
+  const zips = document.getElementById("a-archives");
+  zips.innerHTML = archiveZips.length
+    ? archiveZips.map((z) =>
+        `<a class="pill" href="${esc(z.url)}">${esc(z.from.slice(0, 10))} — ${esc(z.to.slice(0, 10))}` +
+        ` <span class="sub">${num(z.images)} · ${fmtSize(z.size_bytes)}</span></a>`).join("")
+    : `<div class="wf-line">${t("a_no_archives")}</div>`;
+  document.getElementById("a-count").textContent = archiveTotal
+    ? `${t("a_shown")}: ${num(archiveItems.length)} ${t("a_of")} ${num(archiveTotal)}`
+    : t("a_empty");
+  document.getElementById("a-grid").innerHTML = archiveItems.map(imageCard).join("");
+  document.getElementById("a-more").classList.toggle("hidden", archiveItems.length >= archiveTotal);
+}
+
+async function loadArchive(more = false) {
+  try {
+    const offset = more ? archiveItems.length : 0;
+    const limit = more ? ARCHIVE_PAGE : Math.max(ARCHIVE_PAGE, archiveItems.length);
+    const [list, zips] = await Promise.all([
+      fetch(`/api/images?limit=${limit}&offset=${offset}`, { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/images/archives", { cache: "no-store" }).then((r) => r.json()),
+    ]);
+    archiveItems = more ? archiveItems.concat(list.items) : list.items;
+    archiveTotal = list.total;
+    archiveZips = zips;
+    renderArchive();
+  } catch (_) {}
+}
+
+function archiveVisible() {
+  return !document.getElementById("tab-images").classList.contains("hidden");
+}
+
+document.getElementById("a-more").addEventListener("click", () => loadArchive(true));
+
 /* ---------- satellite ---------- */
 
 let satNorad = null;
@@ -333,7 +444,7 @@ function renderSatellite() {
   const summary = document.getElementById("sat-summary");
   if (!d || !d.summary.observations) {
     summary.innerHTML = `<div class="card wide"><div class="card-label">${t("sat_none")}</div></div>`;
-    ["sat-best", "sat-days", "sat-latest"].forEach((id) => { document.getElementById(id).innerHTML = ""; });
+    ["sat-best", "sat-days", "sat-latest", "sat-modes"].forEach((id) => { document.getElementById(id).innerHTML = ""; });
     return;
   }
   const s = d.summary;
@@ -349,6 +460,8 @@ function renderSatellite() {
     card(t("sat_best_snr"), db1(s.best_snr_db)) +
     card(t("sat_last"), `${last}`,
       `<div class="card-sub">${t("sat_first")}: ${s.first ? s.first.slice(0, 10) : "—"}</div>`);
+
+  document.getElementById("sat-modes").innerHTML = modesTable(d.modes);
 
   document.getElementById("sat-best").innerHTML = d.best ? wfCard(d.best, true) : "—";
 
@@ -561,6 +674,205 @@ document.querySelectorAll("[data-hdays]").forEach((b) =>
 
 function historyVisible() {
   return !document.getElementById("page-history").classList.contains("hidden");
+}
+
+/* ---------- offline test ---------- */
+
+let offlineData = null;
+let offlineOpen = null;
+let offlineDetail = null;
+let offlineSatsLoaded = false;
+
+function runState(r) {
+  if (!r) return "queued";
+  if (r.state === "done") return r.decoded ? "done" : "fail";
+  return r.state;
+}
+
+function stateCell(r) {
+  const st = runState(r);
+  let extra = "";
+  if (st === "running" && r.progress && r.progress.total) extra = ` ${r.progress.done}/${r.progress.total}`;
+  return `<span class="state ${st}">${t("st_" + st)}${extra}</span>`;
+}
+
+function angleText(v) {
+  return v === null || v === undefined ? "—" : `${Number(v).toFixed(1)}°`;
+}
+
+async function loadOfflineSats() {
+  if (offlineSatsLoaded) return;
+  try {
+    const list = await (await fetch("/api/offline/satellites")).json();
+    document.getElementById("o-sats").innerHTML =
+      list.map((x) => `<option value="${x.norad}">${esc(x.name)}</option>`).join("");
+    offlineSatsLoaded = true;
+  } catch (_) {}
+}
+
+function renderOfflineList() {
+  const d = offlineData;
+  if (!d) return;
+  document.getElementById("o-worker").classList.toggle("hidden", d.worker.running);
+  const table = document.getElementById("o-tests");
+  if (!d.tests.length) { table.innerHTML = `<tr><td class="empty">${t("o_none")}</td></tr>`; return; }
+  table.innerHTML =
+    `<tr><th>${t("o_created")}</th><th>${t("o_source")}</th><th>${t("o_file_col")}</th><th>${t("j_sat")}</th>` +
+    `<th class="num">${t("o_angle")}</th><th>${t("o_state")}</th><th>${t("o_best")}</th><th class="num">${t("o_frames")}</th></tr>` +
+    d.tests.map((x) => {
+      const last = x.runs[x.runs.length - 1];
+      // a test that decoded once stays decoded; otherwise show the latest attempt
+      const r = x.best_run && !(last && ["queued", "running"].includes(last.state)) ? x.best_run : last;
+      const best = r && r.best ? `${esc(r.best.name)} <span class="sub">${esc(r.best.file)}</span>` : "—";
+      const satCol = x.norad ? satCell(x.satellite, x.norad)
+        : r && r.best ? `${satCell(r.best.name, r.best.norad)} <span class="sub">(${t("o_auto")})</span>`
+        : `<span class="none">${t("o_auto")}</span>`;
+      const low = x.max_elevation !== null && x.max_elevation !== undefined && x.max_elevation < d.low_elevation;
+      return `<tr class="pick${offlineOpen === x.id ? " sel" : ""}" data-test="${esc(x.id)}">` +
+        `<td>${esc(x.created.slice(0, 10))} ${hms(x.created)}</td>` +
+        `<td>${t(x.source === "station" ? "o_src_station" : "o_src_upload")}${x.observation_id ? ` #${esc(x.observation_id)}` : ""}</td>` +
+        `<td>${esc(x.filename)}</td><td>${satCol}</td>` +
+        `<td class="num">${angleText(x.max_elevation)}${low ? ` <span class="sub">↓</span>` : ""}</td>` +
+        `<td>${stateCell(r)}</td><td>${best}</td><td class="num">${r && r.best ? num(r.best.frames) : "—"}</td></tr>`;
+    }).join("");
+}
+
+let offlineDetailKey = "";
+
+function renderOfflineDetail(force = true) {
+  const box = document.getElementById("o-detail");
+  const x = offlineDetail;
+  if (!x) { box.classList.add("hidden"); offlineDetailKey = ""; return; }
+  // polling must not wipe what the user is typing: redraw only when something changed
+  const key = lang + JSON.stringify(x);
+  if (!force && key === offlineDetailKey) return;
+  offlineDetailKey = key;
+  box.classList.remove("hidden");
+  const low = x.max_elevation !== null && x.max_elevation !== undefined && x.max_elevation < (offlineData ? offlineData.low_elevation : 10);
+  const geo = x.max_elevation !== undefined && x.max_elevation !== null
+    ? `${t("o_angle")}: <b>${angleText(x.max_elevation)}</b>` +
+      (x.rise_azimuth !== undefined && x.rise_azimuth !== null ? ` · az ${x.rise_azimuth}° → ${x.set_azimuth}°` : "") +
+      (x.station ? ` · ${esc(x.station)}` : "")
+    : `${t("o_angle")}: —`;
+  let html = `<div class="panel-title">${esc(x.filename)} <span class="map-now">${esc(x.id)}</span></div>` +
+    `<div class="pass-info">${geo}<br>` +
+    (x.decoded ? "" : `${t("o_keep")}${low ? ` · <b>${t("o_low")}</b>` : ""}`) + `</div>` +
+    `<div class="o-actions">` +
+    (x.has_input ? `<input id="o-rerun-sat" list="o-sats" placeholder="${t("o_sat")}">` +
+      `<label class="check"><input type="checkbox" id="o-rerun-iq"> <span>${t("o_iq")}</span></label>` +
+      `<button class="pill" type="button" id="o-rerun">${t("o_rerun")}</button>` : "") +
+    `<button class="pill danger" type="button" id="o-del">${t("o_delete")}</button></div>`;
+
+  html += `<div class="panel-title">${t("o_runs")}</div>`;
+  for (const r of x.runs.slice().reverse()) {
+    const req = r.request || {};
+    const rec = r.recording ? `${t("o_rec")}: ${r.recording.samp_rate} Hz · ${r.recording.channels} ch · ${r.recording.seconds} s` +
+      (r.recording.baud ? ` · ~${num(r.recording.baud)} Bd (${t("o_line")} ${r.recording.confidence}×)`
+        : r.recording.lines ? ` · ${t("o_noline")}` : "") : "";
+    html += `<div class="panel">` +
+      `<div class="chart-head"><div class="o-run-head"><b>#${r.run}</b> · ${req.satellite && req.satellite !== "auto" ? `${t("o_given")}: ${esc(req.satellite)}` : t("o_auto")}` +
+      `${req.iq ? " · IQ" : ""} · ${stateCell(r)}${r.tried ? ` · ${t("o_tried")} ${num(r.tried)}` : ""}</div>` +
+      (r.has_kiss ? `<a class="pill" href="/api/offline/${encodeURIComponent(x.id)}/run/${r.run}/kiss">${t("o_kiss")}</a>` : "") + `</div>` +
+      (rec ? `<div class="pass-info">${rec}</div>` : "") +
+      (r.error ? `<div class="note warn">${esc(r.error)}</div>` : "");
+    if (r.ranking && r.ranking.length) {
+      html += `<div class="table-wrap"><table class="tbl"><tr><th>${t("o_ranking")}</th><th>satyaml</th>` +
+        `<th class="num">Bd</th><th class="num">${t("o_frames")}</th></tr>` +
+        r.ranking.slice(0, 15).map((c) => `<tr><td>${satCell(c.name, c.norad)}</td><td class="sub">${esc(c.file)}</td>` +
+          `<td class="num">${c.bauds.map((b) => num(b)).join(", ")}</td><td class="num${c.frames ? " ok" : ""}">${num(c.frames)}</td></tr>`).join("") +
+        `</table></div>`;
+    }
+    if (r.frames_hex && r.frames_hex.length) {
+      html += `<div class="panel-title">${t("o_hex")} (${num(r.frames_hex.length)})</div>` +
+        `<div class="hex">${r.frames_hex.map((h) => `<div>${h.replace(/(..)/g, "$1 ").trim()}</div>`).join("")}</div>`;
+    }
+    if (r.log_tail) {
+      html += `<details><summary class="panel-title">${t("o_log")}</summary><div class="hex log">${esc(r.log_tail)}</div></details>`;
+    }
+    html += `</div>`;
+  }
+  box.innerHTML = html;
+
+  const rerun = document.getElementById("o-rerun");
+  if (rerun) rerun.addEventListener("click", async () => {
+    const sat = document.getElementById("o-rerun-sat").value.trim() || "auto";
+    const iq = document.getElementById("o-rerun-iq").checked;
+    await fetch(`/api/offline/${encodeURIComponent(x.id)}/rerun?satellite=${encodeURIComponent(sat)}&iq=${iq}`, { method: "POST" });
+    loadOffline();
+  });
+  document.getElementById("o-del").addEventListener("click", async () => {
+    if (!window.confirm(t("o_confirm"))) return;
+    await fetch(`/api/offline/${encodeURIComponent(x.id)}`, { method: "DELETE" });
+    offlineOpen = null; offlineDetail = null;
+    loadOffline();
+  });
+}
+
+async function loadOffline() {
+  loadOfflineSats();
+  try {
+    offlineData = await (await fetch("/api/offline", { cache: "no-store" })).json();
+    renderOfflineList();
+    if (offlineOpen) {
+      const r = await fetch(`/api/offline/${encodeURIComponent(offlineOpen)}`, { cache: "no-store" });
+      offlineDetail = r.ok ? await r.json() : null;
+      if (!r.ok) offlineOpen = null;
+    } else {
+      offlineDetail = null;
+    }
+    renderOfflineDetail(false);
+  } catch (_) {}
+}
+
+document.getElementById("o-tests").addEventListener("click", (e) => {
+  const row = e.target.closest("[data-test]");
+  if (!row) return;
+  offlineOpen = row.dataset.test;
+  loadOffline();
+});
+
+document.getElementById("o-upload").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("o-upload-msg");
+  const file = document.getElementById("o-file").files[0];
+  if (!file) return;
+  const q = new URLSearchParams({
+    filename: file.name,
+    satellite: document.getElementById("o-sat").value.trim(),
+    observation: document.getElementById("o-obs").value.trim(),
+    elevation: document.getElementById("o-elev").value.trim().replace(",", "."),
+    iq: document.getElementById("o-iq").checked,
+  });
+  msg.className = "o-msg"; msg.textContent = t("o_uploading");
+  try {
+    const r = await fetch(`/api/offline/upload?${q}`, { method: "POST", body: file });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.detail || r.status);
+    msg.textContent = t("o_queued_msg");
+    offlineOpen = body.id;
+    e.target.reset();
+    loadOffline();
+  } catch (err) { msg.className = "o-msg err"; msg.textContent = String(err.message || err); }
+});
+
+document.getElementById("o-from").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("o-from-msg");
+  const id = document.getElementById("o-from-obs").value.trim();
+  const sat = document.getElementById("o-from-sat").value.trim();
+  try {
+    const r = await fetch(`/api/offline/from/${encodeURIComponent(id)}?satellite=${encodeURIComponent(sat)}`, { method: "POST" });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.detail || r.status);
+    msg.className = "o-msg"; msg.textContent = t("o_queued_msg");
+    offlineOpen = body.id;
+    e.target.reset();
+    loadOffline();
+  } catch (err) { msg.className = "o-msg err"; msg.textContent = String(err.message || err); }
+});
+
+function offlineVisible() {
+  return !document.getElementById("page-offline").classList.contains("hidden");
 }
 
 /* ---------- orbit / map ---------- */
@@ -794,12 +1106,75 @@ document.getElementById("s-today").addEventListener("click", () => loadSignal(ut
 document.getElementById("s-sat").addEventListener("change", renderSignal);
 document.getElementById("s-decoded").addEventListener("change", renderSignal);
 
+/* ---------- by mode (signal tab, satellite tab) ---------- */
+
+const MD_BANDS = ["<5", "5–10", "10–15", "15–20", "≥20"];
+let modesData = null;
+
+function modesHead() {
+  return `<tr><th>${t("md_mode")}</th><th class="num">${t("md_baud")}</th><th class="num">${t("md_passes")}</th>` +
+    `<th class="num">${t("j_decoded")}</th><th class="num">${t("j_packets")}</th><th class="num">${t("md_min")}</th>` +
+    `<th class="num">${t("md_avg_ok")}</th><th class="num">${t("md_avg_fail")}</th>` +
+    MD_BANDS.map((b) => `<th class="num">${t("md_band")} ${b}</th>`).join("") + `</tr>`;
+}
+
+function modeRow(m) {
+  const pct = m.passes ? Math.round((100 * m.decoded) / m.passes) : 0;
+  const bands = m.bands.map((b) => {
+    if (!b.n) return `<td class="num"><span class="none">—</span></td>`;
+    const p = Math.round((100 * b.ok) / b.n);
+    return `<td class="num${b.ok ? " ok" : ""}">${p}% <span class="sub">${b.ok}/${b.n}</span></td>`;
+  }).join("");
+  return `<tr><td>${esc(m.mode)}</td><td class="num">${m.baud ? num(m.baud) : "—"}</td>` +
+    `<td class="num">${num(m.passes)}</td>` +
+    `<td class="num${m.decoded ? " ok" : ""}">${num(m.decoded)} <span class="sub">${pct}%</span></td>` +
+    `<td class="num">${num(m.packets)}</td><td class="num ok">${db1(m.min_snr_decoded)}</td>` +
+    `<td class="num">${db1(m.avg_snr_decoded)}</td><td class="num">${db1(m.avg_snr_failed)}</td>${bands}</tr>`;
+}
+
+function modesTable(list) {
+  return list && list.length ? modesHead() + list.map(modeRow).join("")
+    : `<tr><td class="none">${t("md_empty")}</td></tr>`;
+}
+
+function renderModes() {
+  const d = modesData;
+  if (!d) return;
+  document.getElementById("md-period").textContent = `${t("md_last")} ${d.days} ${t("md_days")}`;
+  document.getElementById("md-table").innerHTML = modesTable(d.modes);
+}
+
+async function loadModes() {
+  try {
+    modesData = await (await fetch("/api/modes?days=90", { cache: "no-store" })).json();
+    renderModes();
+  } catch (_) {}
+}
+
+document.getElementById("sat-modes-more").addEventListener("click", () => {
+  document.querySelector('[data-tab="signal"]').click();
+});
+
 function signalVisible() {
   return !document.getElementById("tab-signal").classList.contains("hidden");
 }
 
 function journalVisible() {
   return !document.getElementById("tab-journal").classList.contains("hidden");
+}
+
+async function loadGuide() {
+  const el = document.getElementById("page-guide");
+  if (el.dataset.loaded) return;
+  const r = await fetch("/static/guide.html");
+  if (r.ok) { el.innerHTML = await r.text(); el.dataset.loaded = "1"; }
+}
+
+async function loadFaq() {
+  const el = document.getElementById("page-faq");
+  if (el.dataset.loaded) return;
+  const r = await fetch("/static/faq.html");
+  if (r.ok) { el.innerHTML = await r.text(); el.dataset.loaded = "1"; }
 }
 
 function applyLang() {
@@ -810,9 +1185,13 @@ function applyLang() {
   renderCompare();
   renderJournal();
   renderSignal();
+  renderModes();
   renderSatellite();
   if (orbitData) renderOrbit();
   renderHistory();
+  renderOfflineList();
+  renderOfflineDetail();
+  renderArchive();
 }
 
 function pad(n) { return String(n).padStart(2, "0"); }
@@ -823,6 +1202,12 @@ function tick() {
     `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}`;
   document.getElementById("utc-time").textContent =
     `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
+  document.getElementById("local-date").textContent =
+    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  document.getElementById("local-time").textContent =
+    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  document.getElementById("local-tz").textContent =
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 async function loadOverview() {
@@ -880,24 +1265,63 @@ document.querySelectorAll("[data-page]").forEach((el) => el.addEventListener("cl
   const page = el.dataset.page;
   document.getElementById("page-overview").classList.toggle("hidden", page !== "overview");
   document.getElementById("page-history").classList.toggle("hidden", page !== "history");
-  document.getElementById("page-placeholder").classList.toggle("hidden", ["overview", "history"].includes(page));
+  document.getElementById("page-offline").classList.toggle("hidden", page !== "offline");
+  document.getElementById("page-guide").classList.toggle("hidden", page !== "guide");
+  document.getElementById("page-placeholder").classList.toggle("hidden", ["overview", "history", "offline", "guide", "faq"].includes(page));
+  if (page === "guide") loadGuide();
+  document.getElementById("page-faq").classList.toggle("hidden", page !== "faq");
+  if (page === "faq") loadFaq();
   if (page === "history") loadHistory();
+  if (page === "offline") loadOffline();
 }));
 
-document.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("click", () => {
-  document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("active", b === el));
-  const tab = el.dataset.tab;
+function showTab(tab) {
+  document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.getElementById("tab-station").classList.toggle("hidden", tab !== "station");
   document.getElementById("tab-journal").classList.toggle("hidden", tab !== "journal");
   document.getElementById("tab-signal").classList.toggle("hidden", tab !== "signal");
   document.getElementById("tab-satellite").classList.toggle("hidden", tab !== "satellite");
   document.getElementById("tab-map").classList.toggle("hidden", tab !== "map");
-  document.getElementById("tab-placeholder").classList.toggle("hidden", ["station", "journal", "signal", "satellite", "map"].includes(tab));
+  document.getElementById("tab-images").classList.toggle("hidden", tab !== "images");
+  document.getElementById("tab-placeholder").classList.toggle("hidden", ["station", "journal", "signal", "satellite", "map", "images"].includes(tab));
   if (tab === "map") loadOrbit();
   if (tab === "satellite") loadSatellites().then(() => loadSatellite());
   if (tab === "journal") loadJournalDays().then(() => loadJournal());
-  if (tab === "signal") fillDays("s-day", signalDay).then(() => loadSignal());
-}));
+  if (tab === "signal") { loadModes(); fillDays("s-day", signalDay).then(() => loadSignal()); }
+  if (tab === "images") loadArchive();
+}
+
+document.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("click", () => showTab(el.dataset.tab)));
+
+// The image archive opens from the "Архив изображений" card on the Station tab.
+document.getElementById("system").addEventListener("click", (e) => {
+  if (e.target.closest("#archive-card")) showTab("images");
+});
+document.getElementById("system").addEventListener("keydown", (e) => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.closest("#archive-card")) { e.preventDefault(); showTab("images"); }
+});
+
+document.getElementById("brand").addEventListener("click", () => {
+  document.querySelector('[data-tab="station"]').click();
+});
+
+async function checkAddons() {
+  const b = document.querySelector('[data-page="offline"]');
+  let on = false;
+  try {
+    const r = await fetch("/api/offline", { cache: "no-store" });
+    on = !!(await r.json()).worker.running;
+  } catch (_) {}
+  b.classList.toggle("hidden", !on);
+  const pg = document.getElementById("page-offline");
+  if (!on && !pg.classList.contains("hidden")) {
+    document.querySelector('[data-tab="station"]').click();
+  }
+}
+
+document.querySelector('[data-page="offline"]').classList.add("hidden");
+checkAddons();
+setInterval(checkAddons, 30000);
 
 applyLang();
 tick();
@@ -907,9 +1331,12 @@ setInterval(loadOverview, 30000);
 setInterval(loadOnline, 300000);
 setInterval(() => { if (mapVisible()) loadOrbit(); }, 30000);
 setInterval(() => { if (historyVisible()) loadHistory(); }, 300000);
+setInterval(() => { if (offlineVisible()) loadOffline(); }, 4000);
 setInterval(() => { if (mapVisible()) { updateCountdowns(); renderPolar(); } }, 1000);
 setInterval(() => {
   if (journalVisible() && journalDay === utcToday()) loadJournalDays().then(() => loadJournal());
   if (signalVisible() && signalDay === utcToday()) fillDays("s-day", signalDay).then(() => loadSignal());
+  if (signalVisible()) loadModes();
   if (satelliteVisible()) loadSatellites().then(() => loadSatellite());
+  if (archiveVisible()) loadArchive();
 }, 60000);
