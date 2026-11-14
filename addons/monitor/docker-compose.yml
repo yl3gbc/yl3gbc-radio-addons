@@ -1,20 +1,46 @@
-# Monitor addon — optional.
-# Start together with the main station file:
+# SONIKS Monitor — дополнение (addon) к станции SONIKS. Версия 0.1alfa.
+# Автор: YL3GBC Arnis Armans.
+#
+# Платформа: amd64 (x86_64) — собрано и проверено. arm64 (Raspberry Pi,
+# Orange Pi) — пока не проверялось.
+#
+# Ставится по желанию: станция работает и без него. Код клиента SONIKS
+# не меняется. Этот файл подключается вместе с основным файлом станции:
+#
+#   cd ~/soniks-client-new
+#   docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml build monitor
 #   docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d
-# Relative paths below are resolved from ~/soniks-client-new (the directory of
-# the first compose file).
-# Only 3-month data and images live on the second disk (./data -> /mnt/sdb2).
+#
+# Относительные пути считаются от папки станции (папка первого файла,
+# например ~/soniks-client-new). ./data можно сделать ссылкой на второй
+# диск; без второго диска это обычная папка.
+#
+# Что нужно добавить в .env станции — см. addons/monitor/env.example.
+#
+# Образы:
+#   soniks-monitor:local       — монитор, собирается из исходников (ниже)
+#   eclipse-mosquitto:2        — локальный MQTT-брокер
+#   influxdb:2                 — база для графиков Grafana
+#   telegraf:latest            — переносит данные из MQTT в InfluxDB
+#   grafana/grafana-oss        — графики, порт 3000
 
 services:
 
-  # Completed observations (.ogg, waterfall .png, decoded images, metadata)
-  # go to the second disk instead of being deleted after upload.
+  # Клиент SONIKS: код не меняется, только две настройки.
+  # Завершённые наблюдения (пакеты, .ogg, водопад, изображения, метаданные)
+  # после выгрузки на портал остаются в ./data/complete, а не удаляются.
+  # Поэтому клиента всегда запускайте вместе с этим файлом.
   soniks-client:
     environment:
       OBSERVATION__REMOVE_OBSERVATION_DATA: "False"
     volumes:
       - ./data/complete:/var/lib/soniks-client/data/complete
 
+  # Монитор: веб-страница на порту 8090.
+  # Всё собирается из исходников: Python 3.15, uv, DuckDB 2.1.0-dev,
+  # FastAPI, uvicorn, paho-mqtt, sgp4. Ветки и коммит DuckDB — ниже.
+  # Библиотека DuckDB берётся из папки станции libs/db_dev2.1.0.
+  # Первая сборка идёт около часа, следующие — из кеша.
   monitor:
     build:
       context: ./addons/monitor/app
@@ -31,18 +57,28 @@ services:
     image: soniks-monitor:local
     container_name: monitor
     environment:
+      # номер станции и адрес портала — те же, что у клиента в .env
       STATION__ID: ${STATION__ID}
       URL__BASE: ${URL__BASE}
     ports:
       - "8090:8090"
     volumes:
+      # завершённые наблюдения клиента (монитор их только читает)
       - ./data/complete:/data/complete
+      # база монитора (DuckDB), наблюдения хранятся 90 дней
       - ./data/monitor:/data/monitor
+      # офлайн-тест: записи и результаты (дополнение offline)
+      - ./data/offline:/data/offline
+      # архив изображений: копии хранятся бессрочно, ZIP по 2 месяца
+      - ./data/images:/data/images
+      # описания спутников satyaml из исходников клиента (только чтение)
       - ./soniks-client/soniks-satyaml/satyaml:/satyaml:ro
     depends_on:
       - mosquitto
     restart: unless-stopped
 
+  # Локальный MQTT-брокер: монитор публикует сюда каждое наблюдение
+  # и состояние станции (soniks/<станция>/pass, soniks/<станция>/health).
   mosquitto:
     image: eclipse-mosquitto:2
     container_name: mosquitto
@@ -51,6 +87,8 @@ services:
       - mosquitto-data:/mosquitto/data
     restart: unless-stopped
 
+  # InfluxDB 2: хранит данные для графиков, 90 дней.
+  # Пользователь, пароль и токен задаются в .env (см. env.example).
   influxdb:
     image: influxdb:2
     container_name: influxdb
@@ -66,6 +104,7 @@ services:
       - ./data/influxdb:/var/lib/influxdb2
     restart: unless-stopped
 
+  # Telegraf: берёт сообщения из mosquitto и пишет их в InfluxDB.
   telegraf:
     image: telegraf:latest
     container_name: telegraf
@@ -78,6 +117,8 @@ services:
       - influxdb
     restart: unless-stopped
 
+  # Grafana: графики по данным InfluxDB, http://адрес-станции:3000
+  # Пароль администратора задаётся в .env (см. env.example).
   grafana:
     image: grafana/grafana-oss
     container_name: grafana
