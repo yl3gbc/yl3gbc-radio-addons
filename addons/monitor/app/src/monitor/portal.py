@@ -6,6 +6,7 @@ Used for the own station and for "Сравнить". All times are UTC.
 """
 
 import json
+from html import unescape
 import re
 import threading
 import time
@@ -90,6 +91,16 @@ def station(station_id: int) -> dict | None:
     return _cached(("station", station_id), fetch)
 
 
+def observation(observation_id: int) -> dict | None:
+    """One observation from ``/api/observations/<id>/`` (pass geometry for the offline test)."""
+
+    def fetch():
+        data, _ = _get(urljoin(settings.portal_api, f"observations/{observation_id}/"))
+        return data
+
+    return _cached(("observation", observation_id), fetch, max_age=86400)
+
+
 def today(station_id: int) -> dict | None:
     """Today (UTC) from ``/api/observations/``: observations started, satellites, packets.
 
@@ -147,7 +158,9 @@ def owner(station_id: int) -> str | None:
 
     def fetch():
         match = _OWNER.search(_get_html(_site(f"/stations/{station_id}/")))
-        return match.group(1) if match else None
+        if not match:
+            return None
+        return unescape(match.group(1)).strip()
 
     return _cached(("owner", station_id), fetch)
 
