@@ -1,0 +1,98 @@
+<div class="panel guide-body" data-gl="ru">
+  <h2>FAQ — SONIKS Monitor 0.1alfa</h2>
+
+  <h3>Почему время в UTC?</h3>
+  <p>В наблюдениях SONIKS и на портале время всегда UTC — это стандарт
+  радиолюбителей. Местное время в шапке — только для справки, для тех,
+  кто не привык к UTC.</p>
+
+  <h3>Меняет ли монитор что-нибудь в станции?</h3>
+  <p>Нет. Код клиента SONIKS не изменён, монитор только читает данные станции.
+  Единственное: в настройках дополнения указано не удалять данные наблюдений
+  после выгрузки, чтобы пакеты, водопады и изображения оставались на диске
+  станции.</p>
+
+  <h3>Откуда берутся данные?</h3>
+  <p>Наблюдения, пакеты, водопады и изображения — с диска станции. Сведения
+  о станции, владелец, будущие задания и сравнение со станциями в сети —
+  с портала sonik.space.</p>
+
+  <h3>Что значит «Сегодня»?</h3>
+  <p>Текущие сутки UTC, с 00:00:00 UTC. Например, в Москве (UTC+3 круглый год)
+  это 03:00 по местному времени.</p>
+
+  <h3>Что показывает «Мин. SNR с данными» в «Сигнал / Waterfall»?</h3>
+  <p>Самый низкий SNR, при котором в этом режиме (модуляция и скорость)
+  за последние 90 дней были декодированы данные. По нему видно, с какого
+  уровня сигнала режим начинает декодироваться.</p>
+
+  <h3>Почему у снимка написано «Изображение неполное»?</h3>
+  <p>Файл изображения повреждён или неполный: например, во время пролёта
+  не были приняты все пакеты, и у файла нет начала. Браузер его показать
+  не может, но файл сохранён в архиве и входит в ZIP.</p>
+
+  <h3>Когда создаётся ZIP-архив?</h3>
+  <p>После окончания двухмесячного периода UTC. Если позже приходит снимок
+  за уже закрытый период, ZIP этого периода создаётся заново.</p>
+
+  <h3>Сколько хранятся данные?</h3>
+  <p>Наблюдения в мониторе — 90 дней. Изображения и ZIP-архивы — бессрочно.</p>
+
+  <h3>Что значит «Не подключено» у «Архива изображений»?</h3>
+  <p>Папка для изображений на диске станции недоступна для записи.
+  Изображения тогда не копируются, пока папка не будет подключена.</p>
+
+  <h3>Как переключить язык?</h3>
+  <p>Кнопками RU / EN в шапке. Выбор запоминается в браузере.</p>
+</div>
+
+<div class="panel guide-body" data-gl="en">
+  <h2>FAQ — SONIKS Monitor 0.1alfa</h2>
+
+  <h3>Why is the time in UTC?</h3>
+  <p>In SONIKS observations and on the portal the time is always UTC — the
+  radio amateur standard. The local time in the header is for reference only,
+  for those not used to UTC.</p>
+
+  <h3>Does the monitor change anything in the station?</h3>
+  <p>No. The SONIKS client code is not changed; the monitor only reads the
+  station's data. The one thing: the add-on settings tell the station not to
+  delete observation data after upload, so that packets, waterfalls and images
+  stay on the station disk.</p>
+
+  <h3>Where does the data come from?</h3>
+  <p>Observations, packets, waterfalls and images come from the station disk.
+  Station details, owner, future jobs and comparison with stations on the
+  network come from the sonik.space portal.</p>
+
+  <h3>What does "Today" mean?</h3>
+  <p>The current UTC day, from 00:00:00 UTC. For example, in Moscow (UTC+3 all
+  year) that is 03:00 local time. Keep in mind that many countries switch
+  between summer and winter time: there the local hour at which the UTC day
+  starts changes twice a year.</p>
+
+  <h3>What does "Min SNR with data" in "Signal / Waterfall" show?</h3>
+  <p>The lowest SNR at which data was decoded in this mode (modulation and
+  rate) over the last 90 days. It shows from which signal level the mode starts
+  to decode.</p>
+
+  <h3>Why does an image say "Incomplete image"?</h3>
+  <p>The image file is damaged or incomplete: for example, not all packets were
+  received during the pass and the file has no beginning. The browser cannot
+  show it, but the file is kept in the archive and is included in the ZIP.</p>
+
+  <h3>When is the ZIP archive made?</h3>
+  <p>After a two-month UTC period ends. If an image for an already closed
+  period arrives later, the ZIP for that period is made again.</p>
+
+  <h3>How long is data kept?</h3>
+  <p>Observations in the monitor — 90 days. Images and ZIP archives — forever.</p>
+
+  <h3>What does "Not connected" on "Image archive" mean?</h3>
+  <p>The image folder on the station disk is not writable. Images are not
+  copied until the folder is connected.</p>
+
+  <h3>How do I switch the language?</h3>
+  <p>With the RU / EN buttons in the header. The choice is remembered in the
+  browser.</p>
+</div>
