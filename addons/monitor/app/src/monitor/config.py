@@ -16,6 +16,9 @@ class Settings:
     portal_api: str
     client_health_url: str
     complete_dir: Path
+    images_dir: Path
+    offline_dir: Path
+    offline_low_elevation: float
     db_path: Path
     satyaml_dir: Path
     mqtt_host: str
@@ -32,6 +35,9 @@ settings = Settings(
     portal_api=_env("URL__BASE", "https://sonik.space/api/"),
     client_health_url=_env("MONITOR_CLIENT_HEALTH_URL", "http://soniks-client:8080/healthz"),
     complete_dir=Path(_env("MONITOR_COMPLETE_DIR", "/data/complete")),
+    images_dir=Path(_env("MONITOR_IMAGES_DIR", "/data/images")),
+    offline_dir=Path(_env("MONITOR_OFFLINE_DIR", "/data/offline")),
+    offline_low_elevation=float(_env("MONITOR_OFFLINE_LOW_ELEVATION", "10")),
     db_path=Path(_env("MONITOR_DB_PATH", "/data/monitor/monitor.duckdb")),
     satyaml_dir=Path(_env("MONITOR_SATYAML_DIR", "/satyaml")),
     mqtt_host=_env("MONITOR_MQTT_HOST", "mosquitto"),
