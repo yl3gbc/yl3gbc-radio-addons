@@ -1,0 +1,111 @@
+<div class="panel guide-body" data-gl="ru">
+  <h2>Руководство — SONIKS Monitor 0.1alfa</h2>
+
+  <h3>Что это</h3>
+  <p>Monitor — дополнение к наземной станции SONIKS. Он очень похож на страницу
+  станции на портале sonik.space: многое, что там есть, можно увидеть прямо здесь,
+  на самой станции — http://адрес-станции:8090. Время везде UTC; местное время
+  в шапке — только для справки.</p>
+  <p>Код клиента SONIKS не изменён: он принадлежит команде SONIKS,
+  и монитор никак не вмешивается в их код. Монитор только читает данные
+  станции.</p>
+
+  <h3>Станция</h3>
+  <p>Карточки: станция и версия клиента, QTH, наблюдения всего, «Сегодня»
+  (наблюдения, спутники и пакеты за текущие сутки UTC, с 00:00 UTC), будущие
+  задания, владелец. «Сравнить» — сравнение со станцией в сети по списку или
+  по номеру. Ниже: описания satyaml, оперативная память, диск станции и «Архив
+  изображений». Нажатие на карточку архива открывает архив.</p>
+
+  <h3>Спутник</h3>
+  <p>Выбор спутника: сводка, порог SNR по режиму спутника, лучший приём,
+  наблюдения по дням и последние наблюдения.</p>
+
+  <h3>Орбита / Карта</h3>
+  <p>Положение спутника на карте, пролёт над станцией (полярная диаграмма)
+  и ближайшие пролёты за 24 часа: максимальный угол и азимут AOS → LOS.</p>
+
+  <h3>Дневной журнал</h3>
+  <p>Выбор дня. Итоги дня, средние по спутникам (шум, SNR, пик) и список
+  наблюдений с водопадами.</p>
+
+  <h3>Сигнал / Waterfall</h3>
+  <p>Таблица по режимам (модуляция и скорость) за последние 90 дней: с какого
+  SNR приём декодируется. Ниже водопады за выбранный день, фильтр по спутнику
+  и «только декодированные».</p>
+
+  <h3>История</h3>
+  <p>7, 30 или 90 дней: графики наблюдений, пакетов, спутников, среднего SNR
+  и шума, таблица по дням.</p>
+
+  <h3>Офлайн-тест</h3>
+  <p>Загрузка записи пролёта (.ogg) для декодирования без станции. Декодер
+  работает без сети, результат (KISS) остаётся только на станции.</p>
+
+  <h3>Архив изображений</h3>
+  <p>Каждое изображение (SSTV, SSDV, LRPT, пакетное изображение) копируется
+  на диск станции и хранится бессрочно. По каждому снимку: тип, спутник, номер
+  наблюдения, время UTC, режим. Каждые 2 месяца создаётся ZIP-архив
+  (01.01–28/29.02, 01.03–30.04, 01.05–30.06, 01.07–31.08, 01.09–31.10,
+  01.11–31.12, 00:00:00–23:59:59 UTC), после окончания периода. Если файл
+  изображения повреждён, вместо снимка показано «Изображение неполное».</p>
+
+  <h3>Хранение данных</h3>
+  <p>Наблюдения в мониторе хранятся 90 дней, изображения — бессрочно.</p>
+</div>
+
+<div class="panel guide-body" data-gl="en">
+  <h2>Guide — SONIKS Monitor 0.1alfa</h2>
+
+  <h3>What it is</h3>
+  <p>Monitor is an add-on for a SONIKS ground station. It is very similar to the
+  station page on the sonik.space portal: much of what is there can be seen right
+  here, on the station itself — http://station-address:8090. All times are UTC;
+  the local time in the header is for reference only.</p>
+  <p>The SONIKS client code is not changed: it belongs to the SONIKS team,
+  and the monitor does not interfere with their code in any way. The monitor
+  only reads the station's data.</p>
+
+  <h3>Station</h3>
+  <p>Cards: station and client version, QTH, total observations, "Today"
+  (observations, satellites and packets for the current UTC day, from 00:00 UTC),
+  future jobs, owner. "Compare" compares with a station on the network, from the
+  list or by number. Below: satyaml descriptions, RAM, station disk and "Image
+  archive". Clicking the archive card opens the archive.</p>
+
+  <h3>Satellite</h3>
+  <p>Pick a satellite: summary, SNR threshold for the satellite's mode, best
+  reception, observations by day and latest observations.</p>
+
+  <h3>Orbit / Map</h3>
+  <p>The satellite's position on the map, the pass over the station (polar plot)
+  and upcoming passes for 24 hours: maximum elevation and azimuth AOS → LOS.</p>
+
+  <h3>Daily journal</h3>
+  <p>Pick a day. Day totals, per-satellite averages (noise, SNR, peak) and the
+  list of observations with waterfalls.</p>
+
+  <h3>Signal / Waterfall</h3>
+  <p>Table by mode (modulation and rate) for the last 90 days: from which SNR
+  reception decodes. Below, waterfalls for the selected day, a satellite filter
+  and "decoded only".</p>
+
+  <h3>History</h3>
+  <p>7, 30 or 90 days: charts of observations, packets, satellites, average SNR
+  and noise, and a table by day.</p>
+
+  <h3>Offline test</h3>
+  <p>Upload a pass recording (.ogg) to decode it without the station. The decoder
+  works without network; the result (KISS) stays on the station only.</p>
+
+  <h3>Image archive</h3>
+  <p>Every image (SSTV, SSDV, LRPT, packet image) is copied to the station disk
+  and kept forever. For each image: type, satellite, observation number, UTC
+  time, mode. Every 2 months a ZIP archive is made (01.01–28/29.02, 01.03–30.04,
+  01.05–30.06, 01.07–31.08, 01.09–31.10, 01.11–31.12, 00:00:00–23:59:59 UTC),
+  after the period ends. If an image file is damaged, "Incomplete image" is
+  shown instead of the picture.</p>
+
+  <h3>Data storage</h3>
+  <p>Observations are kept in the monitor for 90 days, images forever.</p>
+</div>
