@@ -8,8 +8,11 @@
 # не меняется. Этот файл подключается вместе с основным файлом станции:
 #
 #   cd ~/soniks-client-new
-#   docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml build monitor
 #   docker compose -f docker-compose.yml -f addons/monitor/docker-compose.yml up -d
+#
+# Монитор берётся готовым образом с Docker Hub. Версию
+# образа можно выбрать в .env (MONITOR_IMAGE).
+# Собрать самому из исходников: docker-compose.build.yml
 #
 # Относительные пути считаются от папки станции (папка первого файла,
 # например ~/soniks-client-new). ./data можно сделать ссылкой на второй
@@ -18,7 +21,7 @@
 # Что нужно добавить в .env станции — см. addons/monitor/env.example.
 #
 # Образы:
-#   soniks-monitor:local       — монитор, собирается из исходников (ниже)
+#   yl3gbc/soniks-monitor      — монитор, Docker Hub
 #   eclipse-mosquitto:2        — локальный MQTT-брокер
 #   influxdb:2                 — база для графиков Grafana
 #   telegraf:latest            — переносит данные из MQTT в InfluxDB
@@ -37,24 +40,11 @@ services:
       - ./data/complete:/var/lib/soniks-client/data/complete
 
   # Монитор: веб-страница на порту 8090.
-  # Всё собирается из исходников: Python 3.15, uv, DuckDB 2.1.0-dev,
-  # FastAPI, uvicorn, paho-mqtt, sgp4. Ветки и коммит DuckDB — ниже.
-  # Библиотека DuckDB берётся из папки станции libs/db_dev2.1.0.
-  # Первая сборка идёт около часа, следующие — из кеша.
+  # Готовый образ с Docker Hub (amd64). Адрес и версию
+  # можно заменить в .env (MONITOR_IMAGE), по умолчанию
+  # 0.1alfa. Собрать самому: docker-compose.build.yml
   monitor:
-    build:
-      context: ./addons/monitor/app
-      additional_contexts:
-        db_dev: ./libs/db_dev2.1.0
-      args:
-        PYTHON_BRANCH: "3.15"
-        UV_BRANCH: "main"
-        DUCKDB_CORE_REF: "e08224d653fcade680e471709e9a9035223989df"
-        FASTAPI_REF: "master"
-        UVICORN_REF: "main"
-        PAHO_REF: "master"
-        SGP4_REF: "master"
-    image: soniks-monitor:local
+    image: ${MONITOR_IMAGE:-docker.io/yl3gbc/soniks-monitor:0.1alfa-amd64}
     container_name: monitor
     environment:
       # номер станции и адрес портала — те же, что у клиента в .env

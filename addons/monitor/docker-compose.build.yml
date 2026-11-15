@@ -1,0 +1,29 @@
+# SONIKS Monitor 0.1alfa — сборка образа монитора самому.
+# Обычно образ берётся готовым с Docker Hub (см.
+# docker-compose.yml). Здесь всё собирается из исходников:
+# Python 3.15, uv, DuckDB 2.1.0-dev, FastAPI, uvicorn,
+# paho-mqtt, sgp4. DuckDB берётся из папки станции
+# libs/db_dev2.1.0. Первая сборка идёт около часа.
+# Подключается третьим файлом, из папки станции:
+#   cd ~/soniks-client-new
+#   docker compose -f docker-compose.yml \
+#     -f addons/monitor/docker-compose.yml \
+#     -f addons/monitor/docker-compose.build.yml \
+#     build monitor
+# Образ получает имя из MONITOR_IMAGE (.env) — его можно
+# сразу отправить на Docker Hub.
+
+services:
+  monitor:
+    build:
+      context: ./addons/monitor/app
+      additional_contexts:
+        db_dev: ./libs/db_dev2.1.0
+      args:
+        PYTHON_BRANCH: "3.15"
+        UV_BRANCH: "main"
+        DUCKDB_CORE_REF: "e08224d653fcade680e471709e9a9035223989df"
+        FASTAPI_REF: "master"
+        UVICORN_REF: "main"
+        PAHO_REF: "master"
+        SGP4_REF: "master"

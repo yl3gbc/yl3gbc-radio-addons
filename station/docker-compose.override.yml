@@ -1,0 +1,167 @@
+# SONIKS Monitor 0.1alfa — дополнение к станции SONIKS.
+# Автор: YL3GBC Arnis Armans.
+#
+# Файл лежит в папке станции рядом с docker-compose.yml и .env.
+# Docker Compose читает его сам, отдельно подключать не нужно.
+# Файл SONIKS docker-compose.yml не меняется.
+#
+# Платформа: amd64 (x86_64). Нужен Docker Compose v2.23 или новее.
+# Пароли и токен задаются в .env, в части «SONIKS Monitor».
+#
+# Образы (скачиваются сами командой docker compose pull):
+#   yl3gbc/soniks-monitor  — монитор, порт 8090
+#   eclipse-mosquitto:2    — локальный MQTT-брокер
+#   influxdb:2             — база для графиков
+#   telegraf:latest        — переносит данные из MQTT в InfluxDB
+#   grafana/grafana-oss    — графики, порт 3000
+
+services:
+
+  # Клиент SONIKS: код не меняется, только одна настройка.
+  # Завершённые наблюдения после выгрузки на портал не удаляются:
+  # их читает монитор и сам удаляет те, что старше 90 дней.
+  soniks-client:
+    environment:
+      OBSERVATION__REMOVE_OBSERVATION_DATA: "False"
+
+  # Монитор: страница станции, http://адрес-станции:8090
+  monitor:
+    image: ${MONITOR_IMAGE:-docker.io/yl3gbc/soniks-monitor:0.1alfa-amd64}
+    container_name: monitor
+    environment:
+      STATION__ID: ${STATION__ID}
+      URL__BASE: ${URL__BASE:-https://sonik.space/api/}
+      # наблюдения и описания спутников — из тома клиента
+      MONITOR_COMPLETE_DIR: /client/data/complete
+      MONITOR_SATYAML_DIR: /client/data/sat-data/current/satyaml
+    ports:
+      - "8090:8090"
+    volumes:
+      # том клиента SONIKS (тот же, что в docker-compose.yml)
+      - soniks-client:/client
+      # база монитора (DuckDB), наблюдения хранятся 90 дней
+      - ./data/monitor:/data/monitor
+      # архив изображений: копии хранятся бессрочно, ZIP по 2 месяца
+      - ./data/images:/data/images
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+  # Локальный MQTT-брокер: сюда монитор публикует наблюдения.
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    configs:
+      - source: mosquitto
+        target: /mosquitto/config/mosquitto.conf
+    volumes:
+      - mosquitto-data:/mosquitto/data
+    restart: unless-stopped
+
+  # InfluxDB 2: данные для графиков, хранятся 90 дней.
+  influxdb:
+    image: influxdb:2
+    container_name: influxdb
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_USER}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG: soniks
+      DOCKER_INFLUXDB_INIT_BUCKET: soniks
+      DOCKER_INFLUXDB_INIT_RETENTION: 90d
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN}
+    volumes:
+      - ./data/influxdb:/var/lib/influxdb2
+    restart: unless-stopped
+
+  # Telegraf: берёт сообщения из mosquitto и пишет их в InfluxDB.
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    configs:
+      - source: telegraf
+        target: /etc/telegraf/telegraf.conf
+    depends_on:
+      - mosquitto
+      - influxdb
+    restart: unless-stopped
+
+  # Grafana: графики, http://адрес-станции:3000 (вход: admin).
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+    ports:
+      - "3000:3000"
+    configs:
+      - source: grafana
+        target: /etc/grafana/provisioning/datasources/influxdb.yml
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+
+volumes:
+  mosquitto-data:
+  grafana-data:
+
+# Настройки mosquitto, telegraf и Grafana записаны прямо здесь,
+# чтобы рядом не нужно было класть отдельные файлы.
+# ${INFLUX_TOKEN} Docker Compose подставляет из .env.
+configs:
+  mosquitto:
+    content: |
+      listener 1883
+      allow_anonymous true
+
+      persistence true
+      persistence_location /mosquitto/data/
+
+      log_dest stdout
+  telegraf:
+    content: |
+      [agent]
+        interval = "10s"
+        flush_interval = "10s"
+        omit_hostname = true
+
+      [[outputs.influxdb_v2]]
+        urls = ["http://influxdb:8086"]
+        token = "${INFLUX_TOKEN}"
+        organization = "soniks"
+        bucket = "soniks"
+
+      [[inputs.mqtt_consumer]]
+        servers = ["tcp://mosquitto:1883"]
+        topics = ["soniks/+/health", "soniks/+/pass"]
+        qos = 1
+        client_id = "telegraf"
+        persistent_session = true
+        data_format = "json"
+        json_time_key = "time"
+        json_time_format = "2006-01-02T15:04:05Z07:00"
+        tag_keys = ["norad", "satellite", "mode", "decoder"]
+        json_string_fields = ["observation_id"]
+
+        [[inputs.mqtt_consumer.topic_parsing]]
+          topic = "soniks/+/+"
+          measurement = "_/_/measurement"
+          tags = "_/station/_"
+  grafana:
+    content: |
+      apiVersion: 1
+
+      datasources:
+        - name: InfluxDB
+          type: influxdb
+          access: proxy
+          url: http://influxdb:8086
+          isDefault: true
+          jsonData:
+            version: Flux
+            organization: soniks
+            defaultBucket: soniks
+          secureJsonData:
+            token: ${INFLUX_TOKEN}
